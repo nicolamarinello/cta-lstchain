@@ -73,6 +73,7 @@ if __name__ == "__main__":
 
         for img_index in my_indices:
             if img_index > 0:
+                
                 # print event information
                 img_charge = LST_image_charge[img_index]
                 img_time = LST_image_peak_times[img_index]
@@ -80,12 +81,13 @@ if __name__ == "__main__":
                 print(img_time)
 
                 fig.clear()
-                plt.suptitle('EVENT')
+                plt.suptitle('Real camera event & interpolated event')
                 disps = []
 
-                ax = plt.subplot(1, 2, 1)
+                ax1 = plt.subplot(1, 2, 1)
+                ax2 = plt.subplot(1, 2, 2)
 
-                disp = CameraDisplay(geom, ax=ax, title="Real Camera Event")
+                disp = CameraDisplay(geom, ax=ax1, title="Real Camera Event")
                 disp.add_colorbar()
 
                 # Apply image cleaning
@@ -95,42 +97,32 @@ if __name__ == "__main__":
                 clean = img_charge.copy()
                 clean[~cleanmask] = 0.0
 
-                # Calculate image parameters
-                #hillas = hillas_parameters(geom, clean)
-                # print(hillas)
+                colormap = 'inferno'
 
-                # Show the camera image and overlay Hillas ellipse and clean
-                # pixels
+                # Show the camera image
                 disp.image = img_charge
-                disp.cmap = 'inferno'
+                disp.cmap = colormap
                 disp.highlight_pixels(cleanmask, color='crimson')
-                #disp.overlay_moments(hillas, color='cyan', linewidth=1)
 
                 disps.append(disp)
 
                 # interpolation
-
                 points = np.array(
                     [np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
-                print(points.shape)
+                #print(points.shape)
                 values = np.array(img_charge)
-                print(values.shape)
+                #print(values.shape)
 
                 grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
                 grid_z = griddata(
                     points, values, (grid_x, grid_y), method='cubic')
 
                 grid_z = np.nan_to_num(grid_z)
-                print(grid_z)
+                #print(grid_z)
 
-                ax = plt.subplot(1, 2, 2)
+                inferno = plt.get_cmap(colormap)
 
-                inferno = plt.get_cmap('inferno')
-
-                inter = ax.imshow(grid_z.T, extent=(-1.25, 1.25, -
-                                                    1.25, 1.25), origin='lower', cmap=inferno)
-                plt.colorbar(inter, ax=ax)
-                #plt.gcf().set_size_inches(10, 10)
-                # plt.savefig('foo.png')
-                # plt.show()
-                plt.pause(0.1)
+                interp = ax2.imshow(grid_z.T, extent=(-1.25, 1.25, -
+                                                    1.25, 1.25), origin='lower', cmap=inferno, title='Interpolated camera image')
+                plt.colorbar(interp, ax=ax2)
+                plt.pause(5)
