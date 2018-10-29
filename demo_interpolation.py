@@ -2,16 +2,18 @@ from ctapipe.image import toymodel, hillas_parameters, tailcuts_clean
 from ctapipe.instrument import CameraGeometry
 from ctapipe.visualization import CameraDisplay
 from astropy import units as u
+from scipy.interpolate import griddata
 import tables
 import matplotlib.pyplot as plt
+import numpy as np
 import time
 
 
 if __name__ == "__main__":
 
     # data path
-    data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun13316-33715___cta-prod3_desert-2150m-Paranal-HB9.h5'
-    #data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun5865-23126___cta-prod3_desert-2150m-Paranal-HB9_cone10.h5'
+    #data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun13316-33715___cta-prod3_desert-2150m-Paranal-HB9.h5'
+    data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun5865-23126___cta-prod3_desert-2150m-Paranal-HB9_cone10.h5'
     data = tables.open_file(data_path)
 
     # acquire the data
@@ -53,6 +55,10 @@ if __name__ == "__main__":
 
     # Load the camera
     geom = CameraGeometry.from_name("LSTCam")
+    fig = plt.figure(figsize=(12, 8))
+
+    plt.style.use("ggplot")
+    plt.show(block=False)
 
     for e_idx in range(0, len(data_einfo) - 1):
 
@@ -73,7 +79,13 @@ if __name__ == "__main__":
                 print(img_charge)
                 print(img_time)
 
-                disp = CameraDisplay(geom)
+                fig.clear()
+                plt.suptitle('EVENT')
+                disps = []
+
+                ax = plt.subplot(1, 2, 1)
+
+                disp = CameraDisplay(geom, ax=ax, title="Real Camera Event")
                 disp.add_colorbar()
 
                 # Apply image cleaning
@@ -94,4 +106,31 @@ if __name__ == "__main__":
                 disp.highlight_pixels(cleanmask, color='crimson')
                 #disp.overlay_moments(hillas, color='cyan', linewidth=1)
 
-                plt.show()
+                disps.append(disp)
+
+                # interpolation
+
+                points = np.array(
+                    [np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
+                print(points.shape)
+                values = np.array(img_charge)
+                print(values.shape)
+
+                grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
+                grid_z = griddata(
+                    points, values, (grid_x, grid_y), method='cubic')
+
+                grid_z = np.nan_to_num(grid_z)
+                print(grid_z)
+
+                ax = plt.subplot(1, 2, 2)
+
+                inferno = plt.get_cmap('inferno')
+
+                inter = ax.imshow(grid_z.T, extent=(-1.25, 1.25, -
+                                                    1.25, 1.25), origin='lower', cmap=inferno)
+                plt.colorbar(inter, ax=ax)
+                #plt.gcf().set_size_inches(10, 10)
+                # plt.savefig('foo.png')
+                # plt.show()
+                plt.pause(0.1)
