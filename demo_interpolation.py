@@ -49,30 +49,6 @@ if __name__ == "__main__":
     LST_image_charge = [x['image_charge'] for x in data_LST.iterrows()]
     LST_image_peak_times = [x['image_peak_times'] for x in data_LST.iterrows()]
 
-    # plot the telescopes array
-    tel_types = ['LST', 'MSTS', 'SSTC']
-
-    arr_table = data_ainfo
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    for tel_type in tel_types:
-        tel_x = [x['tel_x'] for x in arr_table.iterrows(
-        ) if x['tel_type'] == tel_type.encode('ascii')]
-        tel_y = [x['tel_y'] for x in arr_table.iterrows(
-        ) if x['tel_type'] == tel_type.encode('ascii')]
-        plt.scatter(tel_x, tel_y, label=tel_type)
-
-    ax.legend()
-    ax.grid()
-    plt.show()
-
-    # extract indexes of a specific telescope
-    tel_type = 'LST'
-    tel_ids = [x['tel_id'] for x in data_ainfo.iterrows(
-    ) if x['tel_type'] == tel_type.encode('ascii')]
-    print(tel_ids)
-
     ###### D I S P L A Y  A L L  T H E  E V E N T S ######
 
     # Load the camera
