@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
 	# data path	
 	data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun13316-33715___cta-prod3_desert-2150m-Paranal-HB9.h5'
+	#data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun5865-23126___cta-prod3_desert-2150m-Paranal-HB9_cone10.h5'
 	data = tables.open_file(data_path)
 
 
@@ -70,48 +71,49 @@ if __name__ == "__main__":
 	tel_ids = [x['tel_id'] for x in data_ainfo.iterrows() if x['tel_type'] == tel_type.encode('ascii')]
 	print(tel_ids)
 
-
-	#select a spcific event
-	event_index = 44
-	my_event = data_einfo[event_index]
-	print('Event number: {}'.format(my_event['event_number']))
-	print('Energy: {} TeV'.format(my_event['mc_energy']))
-	print('Alt: {} rad'.format(my_event['alt']))
-	print('Az: {} rad'.format(my_event['az']))
-	my_indices = my_event['LST_indices']
-	print('LST_indices: ' + str(my_indices))
-
+	###### D I S P L A Y  A L L  T H E  E V E N T S ######
 
 	# Load the camera
 	geom = CameraGeometry.from_name("LSTCam")
 
-	for img_index in my_indices:
-	    if img_index > 0:
-	    	#print event information
-	        img_charge = LST_image_charge[img_index]
-	        img_time = LST_image_peak_times[img_index]
-	        print(img_charge)
-	        print(img_time)
+	for e_idx in range(0,len(data_einfo)-1):
 
-	        disp = CameraDisplay(geom)
-	        disp.add_colorbar()
+		#select a spcific event
+		my_event = data_einfo[e_idx]
+		print('Event number: {}'.format(my_event['event_number']))
+		print('Energy: {} TeV'.format(my_event['mc_energy']))
+		print('Alt: {} rad'.format(my_event['alt']))
+		print('Az: {} rad'.format(my_event['az']))
+		my_indices = my_event['LST_indices']
+		print('LST_indices: ' + str(my_indices))
+
+		for img_index in my_indices:
+		    if img_index > 0:
+		    	#print event information
+		        img_charge = LST_image_charge[img_index]
+		        img_time = LST_image_peak_times[img_index]
+		        print(img_charge)
+		        print(img_time)
+
+		        disp = CameraDisplay(geom)
+		        disp.add_colorbar()
 
 
-	        # Apply image cleaning
-	        cleanmask = tailcuts_clean(
-	            geom, img_charge, picture_thresh=10, boundary_thresh=5
-	        )
-	        clean = img_charge.copy()
-	        clean[~cleanmask] = 0.0
+		        # Apply image cleaning
+		        cleanmask = tailcuts_clean(
+		            geom, img_charge, picture_thresh=10, boundary_thresh=5
+		        )
+		        clean = img_charge.copy()
+		        clean[~cleanmask] = 0.0
 
-	        # Calculate image parameters
-	        #hillas = hillas_parameters(geom, clean)
-	        #print(hillas)
-	        
-	        # Show the camera image and overlay Hillas ellipse and clean pixels
-	        disp.image = img_charge
-	        disp.cmap = 'inferno'
-	        disp.highlight_pixels(cleanmask, color='crimson')
-	        #disp.overlay_moments(hillas, color='cyan', linewidth=1)
+		        # Calculate image parameters
+		        #hillas = hillas_parameters(geom, clean)
+		        #print(hillas)
+		        
+		        # Show the camera image and overlay Hillas ellipse and clean pixels
+		        disp.image = img_charge
+		        disp.cmap = 'inferno'
+		        disp.highlight_pixels(cleanmask, color='crimson')
+		        #disp.overlay_moments(hillas, color='cyan', linewidth=1)
 
-	        plt.show()
+		        plt.show()
