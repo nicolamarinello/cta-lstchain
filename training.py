@@ -8,6 +8,7 @@ from astropy import units as u
 from sklearn.model_selection import train_test_split
 from scipy.interpolate import griddata
 import tables
+import keras
 import numpy as np
 import pandas as pd
 
@@ -50,16 +51,14 @@ def get_event_data(data):
 
 def get_LST_data(data):
 
-    df = pd.DataFrame()
-
     data_LST = data.root.LST
 
     # LST data
-    df['LST_event_index'] = [x['event_index'] for x in data_LST.iterrows()]
-    df['LST_image_charge'] = [x['image_charge'] for x in data_LST.iterrows()]
-    df['LST_image_peak_times'] = [x['image_peak_times'] for x in data_LST.iterrows()]
+    LST_event_index = [x['event_index'] for x in data_LST.iterrows()]
+    LST_image_charge = [x['image_charge'] for x in data_LST.iterrows()]
+    LST_image_peak_times = [x['image_peak_times'] for x in data_LST.iterrows()]
 
-    return df
+    return LST_event_index, LST_image_charge, LST_image_peak_times
 
 
 if __name__ == "__main__":
@@ -76,46 +75,69 @@ if __name__ == "__main__":
     batch_size = 128
     img_rows, img_cols = 100, 100
 
-    df_g = get_LST_data(data_g)
-    df_p = get_LST_data(data_p)
-    df_g['y'] = 1
-    df_p['y'] = 0
+    LST_event_index_g, LST_image_charge_g, LST_image_peak_times_g = get_LST_data(data_g)
+    LST_event_index_p, LST_image_charge_p, LST_image_peak_times_p = get_LST_data(data_p)
+    
+    n_g = len(LST_image_charge_g)
+    n_p = len(LST_image_charge_p)
 
-    df = pd.DataFrame()
+    y_g = np.ones((n_g, 1), dtype=np.int8)
+    y_p = np.zeros((n_p, 1), dtype=np.int8)
 
-    df = df.append(df_g)
-    df = df.append(df_p)
+    LST_image_charge = np.concatenate((LST_image_charge_g,LST_image_charge_p), axis=0)
+    y_ = np.concatenate((y_g, y_p), axis=0)
+    #y_ = y_[0:4]
+
+    print(len(LST_image_charge))
 
     geom = CameraGeometry.from_name("LSTCam")
     points = np.array([np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
 
-    df = df.drop(columns=['LST_event_index','LST_image_peak_times'])
+    LST_image_charge_interp = np.zeros((len(LST_image_charge), 100, 100, 1))
+
+    #print(LST_image_charge_interp)
 
     # slow operation <-------------------------------------
-    for index, row in df.iterrows():
+    for i in range(0, len(LST_image_charge)):
         #print(type(row['LST_image_charge']))
-        values = np.array(row['LST_image_charge'])
+        values = LST_image_charge[i]
         grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
         grid_z = griddata(points, values, (grid_x, grid_y), method='cubic')
         grid_z = np.nan_to_num(grid_z)
-        row['LST_image_charge'] = grid_z
-        print(row['LST_image_charge'].shape)
+        LST_image_charge_interp[i,:,:,:] = grid_z.reshape(100,100,1)
+        #print(grid_z.reshape(100,100,1))
 
     #print(df)
 
-    x_train, x_test, y_train, y_test = train_test_split(df.loc[:, df.columns != 'y'], df.loc[:, df.columns == 'y'], test_size=0.2, random_state=42)
+    #y = np.array(y).reshape(1,len(y)).tolist()
 
-    print(x_train['LST_image_charge'].tolist()[0].shape)
-    #print(y_train['y'])
+    #y = np.array(y).reshape(1,len(y))
 
-    # remove 
+    #print(LST_image_charge_interp)
+    #print(np.array(y).shape)
+
+    #x_train, x_test, y_train, y_test = train_test_split(LST_image_charge, y, test_size=0.2, random_state=42)
+
+    #LST_image_charge = LST_image_charge#.reshape((len(LST_image_charge),100,100,1))
+    #y = np.array(y)
+
+    #print(LST_image_charge)
+    #print(y)
 
     # classifier
+
+    #y = keras.utils.to_categorical(y, num_classes=2)
+
+    #y_ = np.ndarray(y_)
+
+    #print(LST_image_charge)
+
+    
 
     classifier = Sequential()
 
 
-    classifier.add(Conv2D(32, (3, 3), input_shape = (100, 100, 1), activation = 'relu'))
+    classifier.add(Conv2D(32, (3, 3), input_shape = (100, 100, 1), data_format="channels_last", activation = 'relu'))
     classifier.add(MaxPooling2D(pool_size = (2, 2)))
     classifier.add(Flatten())
     classifier.add(Dense(units = 128, activation = 'relu'))
@@ -125,7 +147,10 @@ if __name__ == "__main__":
 
     #classifier.fit_generator(training_set, steps_per_epoch = 8000, epochs = 25, validation_data = test_set, validation_steps = 2000)
 
-    classifier.fit(x=x_train['LST_image_charge'], y=y_train['y'], epochs=1, verbose=1, validation_split=0.15, shuffle=True)
+    classifier.fit(x=LST_image_charge_interp, y=y_, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
 
-
+    
+    
+    
+        
 
