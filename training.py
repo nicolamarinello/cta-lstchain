@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     #print(LST_image_charge)
 
-    
+    '''
 
     classifier = Sequential()
 
@@ -143,11 +143,23 @@ if __name__ == "__main__":
     classifier.add(Dense(units = 128, activation = 'relu'))
     classifier.add(Dense(units = 1, activation = 'sigmoid'))
 
-    classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+    '''
+
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(100, 100, 1), data_format="channels_last"))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(128, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(units = 1, activation='softmax'))
+
+    model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
 
     #classifier.fit_generator(training_set, steps_per_epoch = 8000, epochs = 25, validation_data = test_set, validation_steps = 2000)
 
-    classifier.fit(x=LST_image_charge_interp, y=y_, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
+    model.fit(x=LST_image_charge_interp, y=y_, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
 
     
     
