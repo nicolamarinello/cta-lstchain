@@ -2,11 +2,12 @@ from keras.models import Sequential
 from keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
 #from keras.callbacks import EarlyStopping, TensorBoard
 #from sklearn.metrics import accuracy_score, f1_score
-#from datetime import datetime
 from ctapipe.instrument import CameraGeometry
 from astropy import units as u
 from sklearn.model_selection import train_test_split
 from scipy.interpolate import griddata
+import datetime
+import matplotlib.pyplot as plt
 import tables
 import keras
 import numpy as np
@@ -135,22 +136,21 @@ if __name__ == "__main__":
     print(len(x_test))
     print(len(y_test))
 
-    '''
-
-    classifier = Sequential()
-
-
-    classifier.add(Conv2D(32, (3, 3), input_shape = (100, 100, 1), data_format="channels_last", activation = 'relu'))
-    classifier.add(MaxPooling2D(pool_size = (2, 2)))
-    classifier.add(Flatten())
-    classifier.add(Dense(units = 128, activation = 'relu'))
-    classifier.add(Dense(units = 1, activation = 'sigmoid'))
-
-    '''
-
-    
 
     model = Sequential()
+
+    '''
+
+    model.add(Conv2D(32, (3, 3), input_shape = (100, 100, 1), data_format="channels_last", activation = 'relu'))
+    model.add(MaxPooling2D(pool_size = (2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(units = 128, activation = 'relu'))
+    model.add(Dense(units = 1, activation = 'sigmoid'))
+    
+
+    '''
+
     model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(100, 100, 1), data_format="channels_last"))
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -159,17 +159,40 @@ if __name__ == "__main__":
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(units = 1, activation='sigmoid'))
+    
+    model.summary()
 
     model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
 
-    #classifier.fit_generator(training_set, steps_per_epoch = 8000, epochs = 25, validation_data = test_set, validation_steps = 2000)
+    history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
 
-    model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
+    score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
 
-    performances = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
+    now = datetime.datetime.now()
+
+    #model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d %H:%M")) + '.h5') 
     
-    print(performances)
+    print('Test loss:' + str(score[0]))
+    print('Test accuracy:' + str(score[1]))
 
-    print(model.predict(x_test))
-        
+    '''
 
+    # Plot training & validation accuracy values
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+    # Plot training & validation loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+    
+    '''
