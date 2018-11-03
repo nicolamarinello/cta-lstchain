@@ -130,7 +130,10 @@ if __name__ == "__main__":
 
     #y_ = np.ndarray(y_)
 
-    #print(LST_image_charge)
+    np.set_printoptions(threshold=np.nan)
+
+    print(len(x_test))
+    print(len(y_test))
 
     '''
 
@@ -145,6 +148,8 @@ if __name__ == "__main__":
 
     '''
 
+    
+
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(100, 100, 1), data_format="channels_last"))
     model.add(Conv2D(64, (3, 3), activation='relu'))
@@ -153,7 +158,7 @@ if __name__ == "__main__":
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(units = 1, activation='softmax'))
+    model.add(Dense(units = 1, activation='sigmoid'))
 
     model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
 
@@ -161,8 +166,10 @@ if __name__ == "__main__":
 
     model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
 
+    performances = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
     
-    
-    
+    print(performances)
+
+    print(model.predict(x_test))
         
 
