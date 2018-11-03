@@ -84,8 +84,8 @@ if __name__ == "__main__":
     y_g = np.ones((n_g, 1), dtype=np.int8)
     y_p = np.zeros((n_p, 1), dtype=np.int8)
 
-    LST_image_charge = np.concatenate((LST_image_charge_g,LST_image_charge_p), axis=0)
-    y_ = np.concatenate((y_g, y_p), axis=0)
+    LST_image_charge = np.concatenate((LST_image_charge_g[1:1000],LST_image_charge_p[1:1000]), axis=0)
+    y_ = np.concatenate((y_g[1:1000], y_p[1:1000]), axis=0)
     #y_ = y_[0:4]
 
     print(len(LST_image_charge))
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     #print(LST_image_charge_interp)
     #print(np.array(y).shape)
 
-    #x_train, x_test, y_train, y_test = train_test_split(LST_image_charge, y, test_size=0.2, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(LST_image_charge_interp, y_, test_size=0.2, random_state=42)
 
     #LST_image_charge = LST_image_charge#.reshape((len(LST_image_charge),100,100,1))
     #y = np.array(y)
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     #classifier.fit_generator(training_set, steps_per_epoch = 8000, epochs = 25, validation_data = test_set, validation_steps = 2000)
 
-    model.fit(x=LST_image_charge_interp, y=y_, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
+    model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.15, shuffle=True)
 
     
     
