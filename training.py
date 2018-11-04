@@ -94,7 +94,7 @@ if __name__ == "__main__":
     geom = CameraGeometry.from_name("LSTCam")
     points = np.array([np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
 
-    LST_image_charge_interp = np.zeros((len(LST_image_charge), 100, 100, 1))
+    LST_image_charge_interp = np.zeros((len(LST_image_charge), 1, 100, 100))
 
     #print(LST_image_charge_interp)
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
         grid_z = griddata(points, values, (grid_x, grid_y), method='cubic')
         grid_z = np.nan_to_num(grid_z)
-        LST_image_charge_interp[i,:,:,:] = grid_z.reshape(100,100,1)
+        LST_image_charge_interp[i,:,:,:] = grid_z.reshape(1,100,100)
         #print(grid_z.reshape(100,100,1))
 
     #print(df)
@@ -131,10 +131,10 @@ if __name__ == "__main__":
 
     #y_ = np.ndarray(y_)
 
-    np.set_printoptions(threshold=np.nan)
+    #np.set_printoptions(threshold=np.nan)
 
-    print(len(x_test))
-    print(len(y_test))
+    print(x_test)
+    print(y_test)
 
 
     model = Sequential()
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     '''
 
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(100, 100, 1), data_format="channels_last"))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(1, 100, 100), data_format="channels_first"))
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
