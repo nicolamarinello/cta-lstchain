@@ -85,9 +85,8 @@ if __name__ == "__main__":
     y_g = np.ones((n_g, 1), dtype=np.int8)
     y_p = np.zeros((n_p, 1), dtype=np.int8)
 
-    LST_image_charge = np.concatenate((LST_image_charge_g[1:1000],LST_image_charge_p[1:1000]), axis=0)
-    y_ = np.concatenate((y_g[1:1000], y_p[1:1000]), axis=0)
-    #y_ = y_[0:4]
+    LST_image_charge = np.concatenate((LST_image_charge_g[1:],LST_image_charge_p[1:]), axis=0)
+    y_ = np.concatenate((y_g[1:], y_p[1:]), axis=0)
 
     print(len(LST_image_charge))
 
@@ -99,43 +98,16 @@ if __name__ == "__main__":
     #print(LST_image_charge_interp)
 
     # slow operation <-------------------------------------
+    grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
     for i in range(0, len(LST_image_charge)):
         #print(type(row['LST_image_charge']))
-        values = LST_image_charge[i]
-        grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
+        values = LST_image_charge[i]       
         grid_z = griddata(points, values, (grid_x, grid_y), method='cubic')
         grid_z = np.nan_to_num(grid_z)
         LST_image_charge_interp[i,:,:,:] = grid_z.reshape(1,100,100)
         #print(grid_z.reshape(100,100,1))
 
-    #print(df)
-
-    #y = np.array(y).reshape(1,len(y)).tolist()
-
-    #y = np.array(y).reshape(1,len(y))
-
-    #print(LST_image_charge_interp)
-    #print(np.array(y).shape)
-
     x_train, x_test, y_train, y_test = train_test_split(LST_image_charge_interp, y_, test_size=0.2, random_state=42)
-
-    #LST_image_charge = LST_image_charge#.reshape((len(LST_image_charge),100,100,1))
-    #y = np.array(y)
-
-    #print(LST_image_charge)
-    #print(y)
-
-    # classifier
-
-    #y = keras.utils.to_categorical(y, num_classes=2)
-
-    #y_ = np.ndarray(y_)
-
-    #np.set_printoptions(threshold=np.nan)
-
-    print(x_test)
-    print(y_test)
-
 
     model = Sequential()
 
@@ -174,25 +146,3 @@ if __name__ == "__main__":
     
     print('Test loss:' + str(score[0]))
     print('Test accuracy:' + str(score[1]))
-
-    '''
-
-    # Plot training & validation accuracy values
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('Model accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
-
-    # Plot training & validation loss values
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
-    
-    '''
