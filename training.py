@@ -77,8 +77,8 @@ if __name__ == "__main__":
     data_path_g = '../../simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/'
 
     # retrieve file lists for protons & gammas
-    files_p = [f for f in listdir(data_path_p) if isfile(join(data_path_p, f))]
-    files_g = [f for f in listdir(data_path_g) if isfile(join(data_path_g, f))]
+    files_p = [f for f in listdir(data_path_p) if (isfile(join(data_path_p, f)) and f.endswith(".h5"))]
+    files_g = [f for f in listdir(data_path_g) if (isfile(join(data_path_g, f)) and f.endswith(".h5"))]
     
     # define the array that will collect the simulated charge for protons
     LST_image_charge_pp = np.array([], dtype=np.int64).reshape(0,1855)
