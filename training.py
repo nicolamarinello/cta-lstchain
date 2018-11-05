@@ -99,26 +99,26 @@ if __name__ == "__main__":
         LST_image_charge_gg = np.concatenate((LST_image_charge_gg,LST_image_charge_g[1:]), axis=0)
     
     # concatenate protons & gammas values
-    LST_image_charge = np.concatenate((LST_image_charge_pp,LST_image_charge_gg), axis=0)
+    LST_image_charge = np.concatenate((LST_image_charge_pp,LST_image_charge_gg), axis=0)#[0:1000]
     
     # set a label for gammas & protons
     n_g = len(LST_image_charge_gg)
     n_p = len(LST_image_charge_pp)
 
-    y_g = np.ones((n_g, 1), dtype=np.int8)
-    y_p = np.zeros((n_p, 1), dtype=np.int8)
+    y_g = np.ones((n_g), dtype=np.int8)
+    y_p = np.zeros((n_p), dtype=np.int8)
     
-    y_ = np.concatenate((y_g, y_p), axis=0)
+    y_ = np.concatenate((y_g, y_p), axis=0)#[0:100]
 
-    print(LST_image_charge)
-    print(y_)
+    print(LST_image_charge.shape)
+    print(y_.shape)
 
     # get camera geometry & camera pixels coordinates
     geom = CameraGeometry.from_name("LSTCam")
     points = np.array([np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
 
     # define the final array that will contain the interpolated images
-    LST_image_charge_interp = np.zeros((len(LST_image_charge), 1, img_rows, img_cols))
+    LST_image_charge_interp = np.zeros((len(LST_image_charge), img_rows, img_cols))
 
     # slow operation <-------------------------------------
     grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
@@ -126,15 +126,22 @@ if __name__ == "__main__":
         values = LST_image_charge[i]       
         grid_z = griddata(points, values, (grid_x, grid_y), method='cubic')
         grid_z = np.nan_to_num(grid_z)
-        LST_image_charge_interp[i,:,:,:] = grid_z.reshape(1, img_rows, img_cols)
+        LST_image_charge_interp[i] = grid_z
 
+    LST_image_charge_interp = LST_image_charge_interp.reshape(LST_image_charge_interp.shape[0], 1, img_rows, img_cols)
+
+    print(LST_image_charge_interp)
+    print(LST_image_charge_interp.shape)
+    print(y_)
+    print(y_.shape)
+    
     # splitting entire dataset in train & test sets
     x_train, x_test, y_train, y_test = train_test_split(LST_image_charge_interp, y_, test_size=0.2, random_state=42)
 
     # define the network model
     model = Sequential()
 
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(1, img_rows, img_cols), data_format="channels_first"))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(1, img_rows, img_cols), data_format='channels_first'))
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
