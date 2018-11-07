@@ -123,10 +123,7 @@ if __name__ == "__main__":
     # slow operation <-------------------------------------
     grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
     for i in range(0, len(LST_image_charge)):
-        values = LST_image_charge[i]       
-        grid_z = griddata(points, values, (grid_x, grid_y), method='cubic')
-        grid_z = np.nan_to_num(grid_z)
-        LST_image_charge_interp[i] = grid_z
+        LST_image_charge_interp[i] = griddata(points, LST_image_charge[i], (grid_x, grid_y), fill_value=0, method='cubic')
 
     LST_image_charge_interp = LST_image_charge_interp.reshape(LST_image_charge_interp.shape[0], 1, img_rows, img_cols)
 
