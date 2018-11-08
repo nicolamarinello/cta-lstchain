@@ -15,39 +15,35 @@ usage: python lst_interpolate path/to/folder1 path/to/folder2 path/to/folder3 ..
 
 def get_array_data(data):
 
-    df = pd.DataFrame()
-
     data_ainfo = data.root.Array_Info
 
     # array info data
-    df['ai_run_array_direction'] = [x['run_array_direction'] for x in data_ainfo.iterrows()]
-    df['ai_tel_id'] = [x['tel_id'] for x in data_ainfo.iterrows()]
-    df['ai_tel_type'] = [x['tel_type'] for x in data_ainfo.iterrows()]
-    df['ai_tel_x'] = [x['tel_x'] for x in data_ainfo.iterrows()]
-    df['ai_tel_y'] = [x['tel_y'] for x in data_ainfo.iterrows()]
-    df['ai_tel_z'] = [x['tel_z'] for x in data_ainfo.iterrows()]
+    ai_run_array_direction = [x['run_array_direction'] for x in data_ainfo.iterrows()]
+    ai_tel_id = [x['tel_id'] for x in data_ainfo.iterrows()]
+    ai_tel_type = [x['tel_type'] for x in data_ainfo.iterrows()]
+    ai_tel_x = [x['tel_x'] for x in data_ainfo.iterrows()]
+    ai_tel_y = [x['tel_y'] for x in data_ainfo.iterrows()]
+    ai_tel_z = [x['tel_z'] for x in data_ainfo.iterrows()]
 
-    return df
+    return ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z
 
 def get_event_data(data):
-
-    df = pd.DataFrame()
 
     data_einfo = data.root.Event_Info
 
     # event info data
-    df['ei_alt'] = [x['alt'] for x in data_einfo.iterrows()]
-    df['ei_az'] = [x['az'] for x in data_einfo.iterrows()]
-    df['ei_core_x'] = [x['core_x'] for x in data_einfo.iterrows()]
-    df['ei_core_y'] = [x['core_y'] for x in data_einfo.iterrows()]
-    df['ei_event_number'] = [x['event_number'] for x in data_einfo.iterrows()]
-    df['ei_h_first_int'] = [x['h_first_int'] for x in data_einfo.iterrows()]
-    df['ei_mc_energy'] = [x['mc_energy'] for x in data_einfo.iterrows()]
-    df['ei_particle_id'] = [x['particle_id'] for x in data_einfo.iterrows()]
-    df['ei_run_number'] = [x['run_number'] for x in data_einfo.iterrows()]
-    df['ei_LST_indices'] = [x['LST_indices'] for x in data_einfo.iterrows()]
+    ei_alt = [x['alt'] for x in data_einfo.iterrows()]
+    ei_az = [x['az'] for x in data_einfo.iterrows()]
+    ei_core_x = [x['core_x'] for x in data_einfo.iterrows()]
+    ei_core_y = [x['core_y'] for x in data_einfo.iterrows()]
+    ei_event_number = [x['event_number'] for x in data_einfo.iterrows()]
+    ei_h_first_int = [x['h_first_int'] for x in data_einfo.iterrows()]
+    ei_mc_energy = [x['mc_energy'] for x in data_einfo.iterrows()]
+    ei_particle_id = [x['particle_id'] for x in data_einfo.iterrows()]
+    ei_run_number = [x['run_number'] for x in data_einfo.iterrows()]
+    ei_LST_indices = [x['LST_indices'] for x in data_einfo.iterrows()]
 
-    return df
+    return ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices
 
 def get_LST_data(data):
 
