@@ -6,6 +6,7 @@ from astropy import units as u
 from scipy.interpolate import griddata
 import multiprocessing as mp
 import numpy as np
+import h5py
 import sys
 import tables
 
@@ -25,7 +26,7 @@ def get_array_data(data):
     ai_tel_y = [x['tel_y'] for x in data_ainfo.iterrows()]
     ai_tel_z = [x['tel_z'] for x in data_ainfo.iterrows()]
 
-    return ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z
+    return data_ainfo, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z
 
 def get_event_data(data):
 
@@ -43,7 +44,7 @@ def get_event_data(data):
     ei_run_number = [x['run_number'] for x in data_einfo.iterrows()]
     ei_LST_indices = [x['LST_indices'] for x in data_einfo.iterrows()]
 
-    return ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices
+    return data_einfo, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices
 
 def get_LST_data(data):
 
@@ -54,7 +55,7 @@ def get_LST_data(data):
     LST_image_charge = [x['image_charge'] for x in data_LST.iterrows()]
     LST_image_peak_times = [x['image_peak_times'] for x in data_LST.iterrows()]
 
-    return LST_event_index, LST_image_charge, LST_image_peak_times
+    return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
 def func(paths):
@@ -68,7 +69,7 @@ def func(paths):
 
         # get the data from the file
         data_p = tables.open_file(f)
-        _, LST_image_charge, _ = get_LST_data(data_p)
+        _, _, LST_image_charge, _ = get_LST_data(data_p)
 
         LST_image_charge = LST_image_charge[1:]
         
@@ -88,6 +89,10 @@ def func(paths):
 
         print("Interpolated data: ")
         print(LST_image_charge_interp)
+
+        data_file = h5py.File(f[:-3] + '_interp.h5', 'w')
+        data_file.create_dataset('LST_image_charge_interp', data=LST_image_charge_interp)
+        data_file.close()
 
 def chunkit(seq, num):
     avg = len(seq) / float(num)
@@ -127,24 +132,6 @@ if __name__ == '__main__':
             Process(target=func, args=([f],)).start()
     else:
         print('ncpus < num_files')
-        c = chunkIt(all_files, ncpus)
+        c = chunkit(all_files, ncpus)
         for f in c:
             Process(target=func, args=(f,)).start()
-
-
-
-    #for i in all_files:
-    #    Process(target=func1, args=(args.a,)).start()
-
-    #Process(target=func, args=([all_files[0]],)).start()
-    #Process(target=func, args=([all_files[0]],)).start()
-
-    '''
-    p1 = 
-    p1.start()
-    p2 = Process(target=func2, args=(args.b,))
-    p2.start()
-    # p1.join()
-    # p2.join()
-
-    '''
