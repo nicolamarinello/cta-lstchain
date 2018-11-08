@@ -88,8 +88,21 @@ def func(paths):
         for i in range(0, len(LST_image_charge)):
             LST_image_charge_interp[i] = griddata(points, LST_image_charge[i], (grid_x, grid_y), fill_value=0, method='cubic')
 
+        data_p = None
+
         print("Interpolated data: ")
         print(LST_image_charge_interp)
+
+def chunkit(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
 
 if __name__ == '__main__':
 
@@ -116,6 +129,12 @@ if __name__ == '__main__':
         print('ncpus >= num_files')
         for f in all_files:
             Process(target=func, args=([f],)).start()
+    else:
+        print('ncpus < num_files')
+        c = chunkIt(all_files, ncpus)
+        for f in c:
+            Process(target=func, args=(f,)).start()
+
 
 
     #for i in all_files:
