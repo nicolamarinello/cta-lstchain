@@ -13,15 +13,17 @@ import sys
 import tables
 
 '''
-usage: python lst_interpolate path/to/folder1 path/to/folder2 path/to/folder3 ...
+usage: python lst_interpolate.py --dirs path/to/folder1 path/to/folder2 path/to/folder3 ... --rem_org 0 --rem_corr 0 --rem_nsnerr 0
 '''
+
 
 def get_array_data(data):
 
     data_ainfo = data.root.Array_Info
 
     # array info data
-    ai_run_array_direction = [x['run_array_direction'] for x in data_ainfo.iterrows()]
+    ai_run_array_direction = [x['run_array_direction']
+                              for x in data_ainfo.iterrows()]
     ai_tel_id = [x['tel_id'] for x in data_ainfo.iterrows()]
     ai_tel_type = [x['tel_type'] for x in data_ainfo.iterrows()]
     ai_tel_x = [x['tel_x'] for x in data_ainfo.iterrows()]
@@ -29,6 +31,7 @@ def get_array_data(data):
     ai_tel_z = [x['tel_z'] for x in data_ainfo.iterrows()]
 
     return data_ainfo, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z
+
 
 def get_event_data(data):
 
@@ -48,6 +51,7 @@ def get_event_data(data):
 
     return data_einfo, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices
 
+
 def get_LST_data(data):
 
     data_LST = data.root.LST
@@ -63,30 +67,36 @@ def get_LST_data(data):
 def func(paths, ro, rc, rn):
 
     img_rows, img_cols = 100, 100
-    
+
     # iterate on each proton file & concatenate charge arrays
     for f in paths:
 
         # get the data from the file
         try:
             data_p = tables.open_file(f)
-            _, LST_event_index, LST_image_charge, LST_image_peak_times = get_LST_data(data_p)
-            _, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices = get_event_data(data_p)
-            _, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z = get_array_data(data_p)
+            _, LST_event_index, LST_image_charge, LST_image_peak_times = get_LST_data(
+                data_p)
+            _, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices = get_event_data(
+                data_p)
+            _, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z = get_array_data(
+                data_p)
 
             LST_image_charge = LST_image_charge[1:]
-            
+
             # get camera geometry & camera pixels coordinates
             geom = CameraGeometry.from_name("LSTCam")
-            points = np.array([np.array(geom.pix_x / u.m), np.array(geom.pix_y / u.m)]).T
-            
+            points = np.array([np.array(geom.pix_x / u.m),
+                               np.array(geom.pix_y / u.m)]).T
+
             grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
 
             # define the final array that will contain the interpolated images
-            LST_image_charge_interp = np.zeros((len(LST_image_charge), img_rows, img_cols))
+            LST_image_charge_interp = np.zeros(
+                (len(LST_image_charge), img_rows, img_cols))
 
             for i in range(0, len(LST_image_charge)):
-                LST_image_charge_interp[i] = griddata(points, LST_image_charge[i], (grid_x, grid_y), fill_value=0, method='cubic')
+                LST_image_charge_interp[i] = griddata(
+                    points, LST_image_charge[i], (grid_x, grid_y), fill_value=0, method='cubic')
 
             data_p.close()
 
@@ -94,42 +104,61 @@ def func(paths, ro, rc, rn):
 
             data_file = h5py.File(f[:-3] + '_interp.h5', 'w')
 
-            data_file.create_dataset('Array_Info/ai_run_array_direction', data=np.array(ai_run_array_direction))
-            data_file.create_dataset('Array_Info/ai_tel_id', data=np.array(ai_tel_id))
-            data_file.create_dataset('Array_Info/ai_tel_type', data=np.array(ai_tel_type))
-            data_file.create_dataset('Array_Info/ai_tel_x', data=np.array(ai_tel_x))
-            data_file.create_dataset('Array_Info/ai_tel_y', data=np.array(ai_tel_y))
-            data_file.create_dataset('Array_Info/ai_tel_z', data=np.array(ai_tel_z))
-            
-            data_file.create_dataset('Event_Info/ei_alt', data=np.array(ei_alt))
+            data_file.create_dataset(
+                'Array_Info/ai_run_array_direction', data=np.array(ai_run_array_direction))
+            data_file.create_dataset(
+                'Array_Info/ai_tel_id', data=np.array(ai_tel_id))
+            data_file.create_dataset(
+                'Array_Info/ai_tel_type', data=np.array(ai_tel_type))
+            data_file.create_dataset(
+                'Array_Info/ai_tel_x', data=np.array(ai_tel_x))
+            data_file.create_dataset(
+                'Array_Info/ai_tel_y', data=np.array(ai_tel_y))
+            data_file.create_dataset(
+                'Array_Info/ai_tel_z', data=np.array(ai_tel_z))
+
+            data_file.create_dataset(
+                'Event_Info/ei_alt', data=np.array(ei_alt))
             data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
-            data_file.create_dataset('Event_Info/ei_core_x', data=np.array(ei_core_x))
-            data_file.create_dataset('Event_Info/ei_core_y', data=np.array(ei_core_y))
-            data_file.create_dataset('Event_Info/ei_event_number', data=np.array(ei_event_number))
-            data_file.create_dataset('Event_Info/ei_h_first_int', data=np.array(ei_h_first_int))
-            data_file.create_dataset('Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
-            data_file.create_dataset('Event_Info/ei_particle_id', data=np.array(ei_particle_id))
-            data_file.create_dataset('Event_Info/ei_run_number', data=np.array(ei_run_number))
-            data_file.create_dataset('Event_Info/ei_LST_indices', data=np.array(ei_LST_indices))
-           
-            data_file.create_dataset('LST/LST_event_index', data=np.array(LST_event_index))
-            data_file.create_dataset('LST/LST_image_charge', data=np.array(LST_image_charge))
-            data_file.create_dataset('LST/LST_image_peak_times', data=np.array(LST_image_peak_times))
-            data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
+            data_file.create_dataset(
+                'Event_Info/ei_core_x', data=np.array(ei_core_x))
+            data_file.create_dataset(
+                'Event_Info/ei_core_y', data=np.array(ei_core_y))
+            data_file.create_dataset(
+                'Event_Info/ei_event_number', data=np.array(ei_event_number))
+            data_file.create_dataset(
+                'Event_Info/ei_h_first_int', data=np.array(ei_h_first_int))
+            data_file.create_dataset(
+                'Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
+            data_file.create_dataset(
+                'Event_Info/ei_particle_id', data=np.array(ei_particle_id))
+            data_file.create_dataset(
+                'Event_Info/ei_run_number', data=np.array(ei_run_number))
+            data_file.create_dataset(
+                'Event_Info/ei_LST_indices', data=np.array(ei_LST_indices))
+
+            data_file.create_dataset(
+                'LST/LST_event_index', data=np.array(LST_event_index))
+            data_file.create_dataset(
+                'LST/LST_image_charge', data=np.array(LST_image_charge))
+            data_file.create_dataset(
+                'LST/LST_image_peak_times', data=np.array(LST_image_peak_times))
+            data_file.create_dataset(
+                'LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
             data_file.close()
 
             if(ro == '1'):
                 remove(f)
                 print('Removing original file')
-        
+
         except HDF5ExtError:
-            
+
             print('\nUnable to open file' + f)
-            
+
             if(rc == '1'):
                 print('Removing it...')
                 remove(f)
-        
+
         except NoSuchNodeError:
 
             print('This file has a problem with the data structure: ' + f)
@@ -137,6 +166,7 @@ def func(paths, ro, rc, rn):
             if(rn == '1'):
                 print('Removing it...')
                 remove(f)
+
 
 def chunkit(seq, num):
 
@@ -156,13 +186,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-      '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.')
+        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.')
     parser.add_argument(
-      '--rem_org', type=str, default='0', help='Select 1 to remove the original files.')
+        '--rem_org', type=str, default='0', help='Select 1 to remove the original files.')
     parser.add_argument(
-      '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.')
+        '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.')
     parser.add_argument(
-      '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.')
+        '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.')
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -170,7 +200,7 @@ if __name__ == '__main__':
 
     ncpus = mp.cpu_count()
     print("\nNumber of CPUs: " + str(ncpus))
-    
+
     # get all the parameters given by the command line
     folders = FLAGS.dirs
 
@@ -178,9 +208,10 @@ if __name__ == '__main__':
 
     # create a single big list containing the paths of all the files
     all_files = []
-    
+
     for path in folders:
-        files = [join(path, f) for f in listdir(path) if (isfile(join(path, f)) and f.endswith(".h5"))]
+        files = [join(path, f) for f in listdir(path) if (
+            isfile(join(path, f)) and f.endswith(".h5"))]
         all_files = all_files + files
 
     #print('Files: ' + '\n' + str(all_files) + '\n')
@@ -190,9 +221,11 @@ if __name__ == '__main__':
     if ncpus >= num_files:
         print('ncpus >= num_files')
         for f in all_files:
-            Process(target=func, args=([f],FLAGS.rem_org,FLAGS.rem_corr,FLAGS.rem_nsnerr)).start()
+            Process(target=func, args=(
+                [f], FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr)).start()
     else:
         print('ncpus < num_files')
         c = chunkit(all_files, ncpus)
         for f in c:
-            Process(target=func, args=(f,FLAGS.rem_org,FLAGS.rem_corr,FLAGS.rem_nsnerr)).start()
+            Process(target=func, args=(f, FLAGS.rem_org,
+                                       FLAGS.rem_corr, FLAGS.rem_nsnerr)).start()
