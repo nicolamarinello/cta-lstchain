@@ -71,7 +71,7 @@ def func(paths, flag):
         # get the data from the file
         try:
             data_p = tables.open_file(f)
-            _, _, LST_image_charge, _ = get_LST_data(data_p)
+            _, LST_event_index, LST_image_charge, LST_image_peak_times = get_LST_data(data_p)
             _, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices = get_event_data(data_p)
             _, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z = get_array_data(data_p)
 
@@ -113,8 +113,10 @@ def func(paths, flag):
             data_file.create_dataset('Event_Info/ei_run_number', data=np.array(ei_run_number))
             data_file.create_dataset('Event_Info/ei_LST_indices', data=np.array(ei_LST_indices))
            
-
-            data_file.create_dataset('LST_image_charge_interp', data=np.array(LST_image_charge_interp))
+            data_file.create_dataset('LST/LST_event_index', data=np.array(LST_event_index))
+            data_file.create_dataset('LST/LST_image_charge', data=np.array(LST_image_charge))
+            data_file.create_dataset('LST/LST_image_peak_times', data=np.array(LST_image_peak_times))
+            data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
             data_file.close()
 
             if(flag == '1'):
