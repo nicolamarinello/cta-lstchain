@@ -59,7 +59,7 @@ def get_LST_data(data):
     return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
-def func(paths):
+def func(paths, flag):
 
     print(paths)
 
@@ -116,6 +116,10 @@ def func(paths):
 
             data_file.create_dataset('LST_image_charge_interp', data=np.array(LST_image_charge_interp))
             data_file.close()
+
+            if(flag == '1'):
+                remove(f)
+                print('Removing original file')
         
         except HDF5ExtError:
             print('\nUnable to open file' + f)
@@ -157,9 +161,9 @@ if __name__ == '__main__':
     if ncpus >= num_files:
         print('ncpus >= num_files')
         for f in all_files:
-            Process(target=func, args=([f],)).start()
+            Process(target=func, args=([f],'1')).start()
     else:
         print('ncpus < num_files')
         c = chunkit(all_files, ncpus)
         for f in c:
-            Process(target=func, args=(f,)).start()
+            Process(target=func, args=(f,'1')).start()
