@@ -4,7 +4,7 @@ from os.path import isfile, join
 from ctapipe.instrument import CameraGeometry
 from astropy import units as u
 from scipy.interpolate import griddata
-from tables.exceptions import HDF5ExtError
+from tables.exceptions import HDF5ExtError, NoSuchNodeError
 import multiprocessing as mp
 import argparse
 import numpy as np
@@ -129,7 +129,10 @@ def func(paths, ro, rc):
             if(rc == '1'):
                 print('Removing it...')
                 remove(f)
+        
+        except NoSuchNodeError
 
+            print('This file has a problem with the data structure: ' + f)
 
 def chunkit(seq, num):
 
