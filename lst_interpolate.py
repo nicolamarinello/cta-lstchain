@@ -5,7 +5,6 @@ from ctapipe.instrument import CameraGeometry
 from astropy import units as u
 from scipy.interpolate import griddata
 from tables.exceptions import HDF5ExtError
-from tqdm import tqdm
 import multiprocessing as mp
 import argparse
 import numpy as np
@@ -66,7 +65,7 @@ def func(paths, ro, rc):
     img_rows, img_cols = 100, 100
     
     # iterate on each proton file & concatenate charge arrays
-    for f in tqdm(paths):
+    for f in paths:
 
         # get the data from the file
         try:
@@ -175,7 +174,7 @@ if __name__ == '__main__':
         files = [join(path, f) for f in listdir(path) if (isfile(join(path, f)) and f.endswith(".h5"))]
         all_files = all_files + files
 
-    print('Files: ' + '\n' + str(all_files) + '\n')
+    #print('Files: ' + '\n' + str(all_files) + '\n')
 
     num_files = len(all_files)
 
