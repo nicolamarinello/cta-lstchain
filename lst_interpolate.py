@@ -130,7 +130,7 @@ def func(paths, ro, rc, rn):
                 print('Removing it...')
                 remove(f)
         
-        except NoSuchNodeError
+        except NoSuchNodeError:
 
             print('This file has a problem with the data structure: ' + f)
 
