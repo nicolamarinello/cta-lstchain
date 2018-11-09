@@ -90,7 +90,7 @@ def func(paths, ro, rc):
 
             data_p.close()
 
-            #print("Writing file: " + f[:-3] + '_interp.h5')
+            print("Writing file: " + f[:-3] + '_interp.h5')
 
             data_file = h5py.File(f[:-3] + '_interp.h5', 'w')
 
