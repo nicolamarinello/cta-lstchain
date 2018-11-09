@@ -5,7 +5,9 @@ from ctapipe.instrument import CameraGeometry
 from astropy import units as u
 from scipy.interpolate import griddata
 from tables.exceptions import HDF5ExtError
+from tqdm import tqdm
 import multiprocessing as mp
+import argparse
 import numpy as np
 import h5py
 import sys
@@ -59,14 +61,12 @@ def get_LST_data(data):
     return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
-def func(paths, flag):
-
-    print(paths)
+def func(paths, ro, rc):
 
     img_rows, img_cols = 100, 100
     
     # iterate on each proton file & concatenate charge arrays
-    for f in paths:
+    for f in tqdm(paths):
 
         # get the data from the file
         try:
@@ -91,7 +91,7 @@ def func(paths, flag):
 
             data_p.close()
 
-            print("Writing file: " + f[:-3] + '_interp.h5')
+            #print("Writing file: " + f[:-3] + '_interp.h5')
 
             data_file = h5py.File(f[:-3] + '_interp.h5', 'w')
 
@@ -119,16 +119,21 @@ def func(paths, flag):
             data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
             data_file.close()
 
-            if(flag == '1'):
+            if(ro == '1'):
                 remove(f)
                 print('Removing original file')
         
         except HDF5ExtError:
+            
             print('\nUnable to open file' + f)
-            print('Removing it...')
-            remove(f)
+            
+            if(rc == '1'):
+                print('Removing it...')
+                remove(f)
+
 
 def chunkit(seq, num):
+
     avg = len(seq) / float(num)
     out = []
     last = 0.0
@@ -139,13 +144,27 @@ def chunkit(seq, num):
 
     return out
 
+
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+      '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.')
+    parser.add_argument(
+      '--rem_org', type=str, default='0', help='Select 1 to remove the original files.')
+    parser.add_argument(
+      '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.')
+
+    FLAGS, unparsed = parser.parse_known_args()
+
+    print(FLAGS.dirs)
 
     ncpus = mp.cpu_count()
     print("\nNumber of CPUs: " + str(ncpus))
     
     # get all the parameters given by the command line
-    folders = sys.argv[1:]
+    folders = FLAGS.dirs
 
     print('Folders: ' + str(folders) + '\n')
 
@@ -163,9 +182,9 @@ if __name__ == '__main__':
     if ncpus >= num_files:
         print('ncpus >= num_files')
         for f in all_files:
-            Process(target=func, args=([f],'1')).start()
+            Process(target=func, args=([f],FLAGS.rem_org,FLAGS.rem_corr)).start()
     else:
         print('ncpus < num_files')
         c = chunkit(all_files, ncpus)
         for f in c:
-            Process(target=func, args=(f,'1')).start()
+            Process(target=func, args=(f,FLAGS.rem_org,FLAGS.rem_corr)).start()
