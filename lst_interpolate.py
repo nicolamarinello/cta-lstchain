@@ -60,7 +60,7 @@ def get_LST_data(data):
     return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
-def func(paths, ro, rc):
+def func(paths, ro, rc, rn):
 
     img_rows, img_cols = 100, 100
     
@@ -134,6 +134,10 @@ def func(paths, ro, rc):
 
             print('This file has a problem with the data structure: ' + f)
 
+            if(rn == '1'):
+                print('Removing it...')
+                remove(f)
+
 def chunkit(seq, num):
 
     avg = len(seq) / float(num)
@@ -157,6 +161,8 @@ if __name__ == '__main__':
       '--rem_org', type=str, default='0', help='Select 1 to remove the original files.')
     parser.add_argument(
       '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.')
+    parser.add_argument(
+      '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.')
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -184,9 +190,9 @@ if __name__ == '__main__':
     if ncpus >= num_files:
         print('ncpus >= num_files')
         for f in all_files:
-            Process(target=func, args=([f],FLAGS.rem_org,FLAGS.rem_corr)).start()
+            Process(target=func, args=([f],FLAGS.rem_org,FLAGS.rem_corr,FLAGS.rem_nsnerr)).start()
     else:
         print('ncpus < num_files')
         c = chunkit(all_files, ncpus)
         for f in c:
-            Process(target=func, args=(f,FLAGS.rem_org,FLAGS.rem_corr)).start()
+            Process(target=func, args=(f,FLAGS.rem_org,FLAGS.rem_corr,FLAGS.rem_nsnerr)).start()
