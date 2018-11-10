@@ -1,14 +1,12 @@
 from keras.models import Sequential
-from keras.layers import Activation, Dropout, Flatten, Dense, Conv2D, MaxPooling2D
-from sklearn.model_selection import train_test_split
+from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D
 from os import listdir
 from os.path import isfile, join
+import random
+from generator import DataGenerator
 import argparse
 import datetime
-import tables
-import keras
 import numpy as np
-import pandas as pd
 
 
 def get_all_files(folders):
@@ -31,23 +29,22 @@ if __name__ == "__main__":
 
     FLAGS, unparsed = parser.parse_known_args()
 
-    epochs = 10
-    img_rows, img_cols = 100, 100
-
     # Parameters
-    params = {'batch_size': 64,
-              'shuffle': True}
+    img_rows, img_cols = 100, 100
+    epochs = 10
+    batch_size = 64
+    shuffle = True
 
     folders = FLAGS.dirs
 
     h5files = get_all_files(folders)
+    random.shuffle(h5files)
+    n_files = len(h5files)
+    n_train = int(np.floor(n_files * 0.7))
 
-    print(folders)
-
-    '''
-    
-    # splitting entire dataset in train & test sets
-    x_train, x_test, y_train, y_test = train_test_split(LST_image_charge_interp, y_, test_size=0.2, random_state=42)
+    # Generators
+    training_generator = DataGenerator(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
+    validation_generator = DataGenerator(h5files[n_train+1:], batch_size=batch_size, shuffle=shuffle)
 
     # define the network model
     model = Sequential()
@@ -59,20 +56,19 @@ if __name__ == "__main__":
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(units = 1, activation='sigmoid'))
+    model.add(Dense(units=1, activation='sigmoid'))
     
     model.summary()
 
     model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
-    history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
-    score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
+    # history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
+    history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=2)
+    # score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
 
-    now = datetime.datetime.now()
+    # now = datetime.datetime.now()
 
     # save the model
-    model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d %H:%M")) + '.h5') 
+    # model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d %H:%M")) + '.h5')
     
-    print('Test loss:' + str(score[0]))
-    print('Test accuracy:' + str(score[1])) 
-    
-    '''
+    # print('Test loss:' + str(score[0]))
+    # print('Test accuracy:' + str(score[1]))
