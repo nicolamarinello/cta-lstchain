@@ -39,11 +39,18 @@ if __name__ == "__main__":
 
     h5files = get_all_files(folders)
     random.shuffle(h5files)
+
+    # print file list
+    for e in h5files:
+        print(e)
+
     n_files = len(h5files)
     n_train = int(np.floor(n_files * 0.7))
 
     # Generators
+    print('Building training generator...')
     training_generator = DataGenerator(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
+    print('Building validation generator...')
     validation_generator = DataGenerator(h5files[n_train+1:], batch_size=batch_size, shuffle=shuffle)
 
     # define the network model
