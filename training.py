@@ -26,6 +26,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files (train & test data).')
+    parser.add_argument(
+        '--workers', type=int, default='', help='Number of workers on fit_generator.')
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -69,7 +71,7 @@ if __name__ == "__main__":
 
     model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
     # history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
-    history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=2)
+    history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers)
     # score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
     # score = model.evaluate_generator()
 
