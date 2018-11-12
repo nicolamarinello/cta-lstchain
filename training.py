@@ -87,3 +87,7 @@ if __name__ == "__main__":
     
     print('Test loss: ' + str(score[0]))
     print('Test accuracy: ' + str(score[1]))
+
+    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=FLAGS.workers, use_multiprocessing=False, verbose=0)
+
+    print(predict)
