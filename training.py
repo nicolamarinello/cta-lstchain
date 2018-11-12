@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # Parameters
     img_rows, img_cols = 100, 100
     epochs = 10
-    batch_size = 64
+    batch_size = 32
     shuffle = True
 
     folders = FLAGS.dirs
@@ -71,6 +71,7 @@ if __name__ == "__main__":
     # history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
     history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=2)
     # score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
+    # score = model.evaluate_generator()
 
     # now = datetime.datetime.now()
 

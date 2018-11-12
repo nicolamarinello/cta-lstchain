@@ -1,6 +1,7 @@
 import keras
 import numpy as np
 import h5py
+import os
 
 
 class DataGenerator(keras.utils.Sequence):
@@ -60,10 +61,11 @@ class DataGenerator(keras.utils.Sequence):
         for i, row in enumerate(indexes):
 
             filename = self.h5files[row[0]]
+            fn_basename = os.path.basename(os.path.normpath(filename))
 
             clas = 0                                 # class: proton by default
 
-            if filename.startswith('p'):
+            if fn_basename.startswith('g'):
                 clas = 1
 
             h5f = h5py.File(filename, 'r')
