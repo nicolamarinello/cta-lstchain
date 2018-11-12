@@ -218,14 +218,21 @@ if __name__ == '__main__':
 
     num_files = len(all_files)
 
+    processes = []
+
     if ncpus >= num_files:
         print('ncpus >= num_files')
         for f in all_files:
-            Process(target=func, args=(
-                [f], FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr)).start()
+            p = Process(target=func, args=([f], FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
+            p.start()
+            processes.append(p)
     else:
         print('ncpus < num_files')
         c = chunkit(all_files, ncpus)
         for f in c:
-            Process(target=func, args=(f, FLAGS.rem_org,
-                                       FLAGS.rem_corr, FLAGS.rem_nsnerr)).start()
+            p = Process(target=func, args=(f, FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
+            p.start()
+            processes.append(p)
+
+    for p in processes:
+        p.join()

@@ -70,11 +70,14 @@ class DataGenerator(keras.utils.Sequence):
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
 
-        # to compute the number of images count the number of rows in the final list (array.shape)
+        processes = []
 
         for i in range(cpu_n):
             p = multiprocessing.Process(target=self.worker, args=(h5f[i], pos[i], i, return_dict))
             p.start()
+            processes.append(p)
+
+        for p in processes:
             p.join()
 
         for key, value in return_dict.items():
