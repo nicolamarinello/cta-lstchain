@@ -1,6 +1,7 @@
 import keras
 import numpy as np
 import h5py
+import multiprocessing
 import os
 
 
@@ -35,16 +36,51 @@ class DataGenerator(keras.utils.Sequence):
 
         return x, y
 
-    def generate_indexes(self):
+    def chunkit(self, seq, num):
 
-        for i, f in enumerate(self.h5files):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
+
+        while last < len(seq):
+            out.append(seq[int(last):int(last + avg)])
+            last += avg
+
+        return out
+
+    def worker(self, h5files, positions, i, return_dict):
+
+        idx = np.array([], dtype=np.int64).reshape(0, 2)
+
+        for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
             length = len(h5f['LST/LST_image_charge_interp'][:])
-            self.n_images += length
             h5f.close()
             r = np.arange(length)
-            cp = np.dstack(np.meshgrid([i], r)).reshape(-1, 2)      # cartesian product
-            self.indexes = np.append(self.indexes, cp, axis=0)
+            cp = np.dstack(np.meshgrid([positions[l]], r)).reshape(-1, 2)  # cartesian product
+            idx = np.append(idx, cp, axis=0)
+        return_dict[i] = idx
+
+    def generate_indexes(self):
+
+        cpu_n = multiprocessing.cpu_count()
+        pos = self.chunkit(np.arange(len(self.h5files)), cpu_n)
+        h5f = self.chunkit(self.h5files, cpu_n)
+
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+
+        # to compute the number of images count the number of rows in the final list (array.shape)
+
+        for i in range(cpu_n):
+            p = multiprocessing.Process(target=self.worker, args=(h5f[i], pos[i], i, return_dict))
+            p.start()
+            p.join()
+
+        for key, value in return_dict.items():
+            self.indexes = np.append(self.indexes, value, axis=0)
+
+        self.n_images = self.indexes.shape[0]
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
