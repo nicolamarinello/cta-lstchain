@@ -55,10 +55,15 @@ if __name__ == "__main__":
     # Generators
     print('Building training generator...')
     training_generator = DataGenerator(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
+    print('Number of training events: ' + str(len(training_generator)))
+
     print('Building validation generator...')
     validation_generator = DataGenerator(h5files[n_train:n_train_val], batch_size=batch_size, shuffle=shuffle)
+    print('Number of validation events: ' + str(len(validation_generator)))
+
     print('Building test generator...')
-    test_generator = DataGenerator(h5files[n_train_val:], batch_size=1, shuffle=False)
+    test_generator = DataGenerator(h5files[n_train_val:], batch_size=batch_size, shuffle=False)
+    print('Number of test events: ' + str(len(test_generator)))
 
     # define the network model
     model = Sequential()
@@ -75,9 +80,7 @@ if __name__ == "__main__":
     model.summary()
 
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    # history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
     history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers)
-    # score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
     score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=1000, workers=FLAGS.workers, use_multiprocessing=True, verbose=1)
 
     now = datetime.datetime.now()
