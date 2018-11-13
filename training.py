@@ -74,11 +74,11 @@ if __name__ == "__main__":
     
     model.summary()
 
-    model.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     # history = model.fit(x=x_train, y=y_train, epochs=10, verbose=1, validation_split=0.2, shuffle=True)
     history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers)
     # score = model.evaluate(x=x_test, y=y_test, batch_size=None, verbose=1, sample_weight=None, steps=None)
-    score = model.evaluate_generator(generator=test_generator, steps=10, max_queue_size=10, workers=FLAGS.workers, use_multiprocessing=False, verbose=1)
+    score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=1000, workers=FLAGS.workers, use_multiprocessing=True, verbose=1)
 
     now = datetime.datetime.now()
 
@@ -88,6 +88,6 @@ if __name__ == "__main__":
     print('Test loss: ' + str(score[0]))
     print('Test accuracy: ' + str(score[1]))
 
-    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=FLAGS.workers, use_multiprocessing=False, verbose=0)
+    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=FLAGS.workers, use_multiprocessing=True, verbose=0)
 
-    print(predict)
+    # print(predict)
