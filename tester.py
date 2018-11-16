@@ -27,6 +27,8 @@ if __name__ == "__main__":
         '--model', type=str, default='', help='Path of the model to load.')
     parser.add_argument(
         '--batch_size', type=int, default=10, help='Batch size.')
+    parser.add_argument(
+        '--workers', type=int, default=1, help='Number of workers.')
 
     FLAGS, unparsed = parser.parse_known_args()
 

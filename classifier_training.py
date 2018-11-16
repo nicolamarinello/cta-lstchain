@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--batch_size', type=int, default=10, help='Batch size.')
     parser.add_argument(
-        '--workers', type=int, default='', help='Number of workers on fit_generator.')
+        '--workers', type=int, default='', help='Number of workers.')
 
     FLAGS, unparsed = parser.parse_known_args()
 
