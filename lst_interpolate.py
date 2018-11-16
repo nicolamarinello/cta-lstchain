@@ -147,7 +147,7 @@ def func(paths, ro, rc, rn):
                 'LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
             data_file.close()
 
-            if(ro == '1'):
+            if ro == '1':
                 remove(f)
                 print('Removing original file')
 
@@ -155,7 +155,7 @@ def func(paths, ro, rc, rn):
 
             print('\nUnable to open file' + f)
 
-            if(rc == '1'):
+            if rc == '1':
                 print('Removing it...')
                 remove(f)
 
@@ -163,7 +163,7 @@ def func(paths, ro, rc, rn):
 
             print('This file has a problem with the data structure: ' + f)
 
-            if(rn == '1'):
+            if rn == '1':
                 print('Removing it...')
                 remove(f)
 
@@ -214,7 +214,7 @@ if __name__ == '__main__':
             isfile(join(path, f)) and f.endswith(".h5"))]
         all_files = all_files + files
 
-    #print('Files: ' + '\n' + str(all_files) + '\n')
+    # print('Files: ' + '\n' + str(all_files) + '\n')
 
     num_files = len(all_files)
 

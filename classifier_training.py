@@ -78,5 +78,5 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
 
     # save the model
-    model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d %H:%M")) + '.h5')
+    model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
 

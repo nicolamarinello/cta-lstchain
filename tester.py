@@ -4,6 +4,8 @@ import random
 from os import listdir
 from os.path import isfile, join
 from generator import DataGenerator
+import numpy as np
+import os
 
 
 def get_all_files(folders):
@@ -52,3 +54,12 @@ if __name__ == "__main__":
 
     predict = model.predict_generator(generator=test_generator, steps=None, max_queue_size=10, workers=FLAGS.workers,
                                       use_multiprocessing=True, verbose=0)
+
+    pr_labels = predict                                 # predicted labels
+    gt_labels = test_generator.get_indexes()[:, 2]      # ground truth labels
+
+    fn_basename = os.path.basename(os.path.normpath(FLAGS.model))
+
+    np.savetxt(FLAGS.model + '_test.txt', np.c_[gt_labels[0:len(test_generator) * batch_size], pr_labels])
+
+    print('Results saved in the .txt file')

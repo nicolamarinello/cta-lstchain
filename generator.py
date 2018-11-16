@@ -10,7 +10,7 @@ class DataGenerator(keras.utils.Sequence):
     def __init__(self, h5files, batch_size=32, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
-        self.indexes = np.array([], dtype=np.int64).reshape(0, 2)
+        self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
         self.shuffle = shuffle
         self.n_images = 0
         self.generate_indexes()
@@ -36,6 +36,9 @@ class DataGenerator(keras.utils.Sequence):
 
         return x, y
 
+    def get_indexes(self):
+        return self.indexes
+
     def chunkit(self, seq, num):
 
         avg = len(seq) / float(num)
@@ -50,14 +53,23 @@ class DataGenerator(keras.utils.Sequence):
 
     def worker(self, h5files, positions, i, return_dict):
 
-        idx = np.array([], dtype=np.int64).reshape(0, 2)
+        idx = np.array([], dtype=np.int64).reshape(0, 3)
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
             length = len(h5f['LST/LST_image_charge_interp'][:])
             h5f.close()
             r = np.arange(length)
-            cp = np.dstack(np.meshgrid([positions[l]], r)).reshape(-1, 2)  # cartesian product
+
+            fn_basename = os.path.basename(os.path.normpath(f))
+
+            clas = 0  # class: proton by default
+
+            if fn_basename.startswith('g'):
+                clas = 1
+
+            cp = np.dstack(np.meshgrid([positions[l]], r, clas)).reshape(-1, 3)  # cartesian product
+
             idx = np.append(idx, cp, axis=0)
         return_dict[i] = idx
 
@@ -100,12 +112,6 @@ class DataGenerator(keras.utils.Sequence):
         for i, row in enumerate(indexes):
 
             filename = self.h5files[row[0]]
-            fn_basename = os.path.basename(os.path.normpath(filename))
-
-            clas = 0                                 # class: proton by default
-
-            if fn_basename.startswith('g'):
-                clas = 1
 
             h5f = h5py.File(filename, 'r')
             image = h5f['LST/LST_image_charge_interp'][row[1]]
@@ -114,7 +120,7 @@ class DataGenerator(keras.utils.Sequence):
             # Store image
             x[i, ] = image
             # Store class
-            y[i] = clas
+            y[i] = row[2]
 
         x = x.reshape(x.shape[0], 1, 100, 100)
 
