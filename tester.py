@@ -62,4 +62,4 @@ if __name__ == "__main__":
 
     np.savetxt(FLAGS.model + '_test.txt', np.c_[gt_labels[0:len(test_generator) * batch_size], pr_labels])
 
-    print('Results saved in the .txt file')
+    print('Results saved in ' + FLAGS.model + '_test.txt')

@@ -1,11 +1,15 @@
 from keras.models import Sequential
 from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D
-from os import listdir
+from os import listdir, mkdir
 from os.path import isfile, join
+from keras.callbacks import TensorBoard
+from time import time
 import random
 from generator import DataGenerator
+from losshistory import LossHistory
 import argparse
 import datetime
+import pickle
 import numpy as np
 
 
@@ -43,6 +47,11 @@ if __name__ == "__main__":
 
     folders = FLAGS.dirs
 
+    # create a folder to keep model & results
+    now = datetime.datetime.now()
+    root_dir = now.strftime("%Y-%m-%d_%H-%M")
+    mkdir(root_dir)
+
     h5files = get_all_files(folders)
     random.shuffle(h5files)
 
@@ -61,7 +70,8 @@ if __name__ == "__main__":
     # define the network model
     model = Sequential()
 
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(1, img_rows, img_cols), data_format='channels_first'))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu',
+                     input_shape=(1, img_rows, img_cols), data_format='channels_first'))
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
@@ -72,11 +82,16 @@ if __name__ == "__main__":
     
     model.summary()
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers)
+    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+    history = LossHistory()
 
-    now = datetime.datetime.now()
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1,
+                        use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history])
 
     # save the model
     model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
 
+    # save results
+    with open(root_dir + '/train-history', 'wb') as file_pi:
+        pickle.dump(history.dic, file_pi)
