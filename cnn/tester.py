@@ -4,7 +4,7 @@ import random
 from os import listdir
 from os.path import isfile, join
 from generator import DataGenerator
-import numpy as np
+import pandas as pd
 import os
 
 
@@ -60,6 +60,10 @@ if __name__ == "__main__":
 
     fn_basename = os.path.basename(os.path.normpath(FLAGS.model))
 
-    np.savetxt(FLAGS.model + '_test.txt', np.c_[gt_labels[0:len(test_generator) * batch_size], pr_labels])
+    df = pd.DataFrame()
+    df['GroundTruth'] = gt_labels[0:len(test_generator) * batch_size]
+    df['Predicted'] = pr_labels
 
-    print('Results saved in ' + FLAGS.model + '_test.txt')
+    df.to_csv(FLAGS.model + '_test.csv', sep=',', index=False, encoding='utf-8')
+
+    print('Results saved in ' + FLAGS.model + '_test.csv')

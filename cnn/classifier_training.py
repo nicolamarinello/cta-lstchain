@@ -90,7 +90,7 @@ if __name__ == "__main__":
                         use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history])
 
     # save the model
-    model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
+    model.save(root_dir + '/LST_classifier_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
 
     # save results
     with open(root_dir + '/train-history', 'wb') as file_pi:
