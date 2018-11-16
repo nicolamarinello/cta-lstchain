@@ -3,7 +3,7 @@ import argparse
 import random
 from os import listdir
 from os.path import isfile, join
-from cnn.generator import DataGenerator
+from generator import DataGenerator
 import numpy as np
 import os
 

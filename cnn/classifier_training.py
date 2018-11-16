@@ -5,8 +5,8 @@ from os.path import isfile, join
 from keras.callbacks import TensorBoard
 from time import time
 import random
-from cnn.generator import DataGenerator
-from cnn.losshistory import LossHistory
+from generator import DataGenerator
+from losshistory import LossHistory
 import argparse
 import datetime
 import pickle
