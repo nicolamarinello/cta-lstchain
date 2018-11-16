@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files (train & test data).')
+        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.')
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.')
     parser.add_argument(
@@ -46,13 +46,8 @@ if __name__ == "__main__":
     h5files = get_all_files(folders)
     random.shuffle(h5files)
 
-    # print file list
-    for e in h5files:
-        print(e)
-
     n_files = len(h5files)
-    n_train_val = int(np.floor(n_files * 0.7))
-    n_train = int(np.floor(n_train_val * 0.8))
+    n_train = int(np.floor(n_files * 0.8))
 
     # Generators
     print('Building training generator...')
@@ -60,12 +55,8 @@ if __name__ == "__main__":
     print('Number of training batches: ' + str(len(training_generator)))
 
     print('Building validation generator...')
-    validation_generator = DataGenerator(h5files[n_train:n_train_val], batch_size=batch_size, shuffle=shuffle)
+    validation_generator = DataGenerator(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
     print('Number of validation batches: ' + str(len(validation_generator)))
-
-    print('Building test generator...')
-    test_generator = DataGenerator(h5files[n_train_val:], batch_size=batch_size, shuffle=False)
-    print('Number of test batches: ' + str(len(test_generator)))
 
     # define the network model
     model = Sequential()
@@ -83,16 +74,9 @@ if __name__ == "__main__":
 
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     history = model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers)
-    score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=1000, workers=FLAGS.workers, use_multiprocessing=True, verbose=1)
 
     now = datetime.datetime.now()
 
     # save the model
     model.save('LST_classifier_' + str(now.strftime("%Y-%m-%d %H:%M")) + '.h5')
-    
-    print('Test loss: ' + str(score[0]))
-    print('Test accuracy: ' + str(score[1]))
 
-    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=FLAGS.workers, use_multiprocessing=True, verbose=0)
-
-    # print(predict)
