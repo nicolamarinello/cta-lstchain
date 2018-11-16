@@ -29,6 +29,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.')
     parser.add_argument(
+        '--batch_size', type=int, default=10, help='Batch size.')
+    parser.add_argument(
         '--workers', type=int, default='', help='Number of workers on fit_generator.')
 
     FLAGS, unparsed = parser.parse_known_args()
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     # Parameters
     img_rows, img_cols = 100, 100
     epochs = FLAGS.epochs
-    batch_size = 32
+    batch_size = FLAGS.batch_size
     shuffle = True
 
     folders = FLAGS.dirs
@@ -55,15 +57,15 @@ if __name__ == "__main__":
     # Generators
     print('Building training generator...')
     training_generator = DataGenerator(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
-    print('Number of training events: ' + str(len(training_generator)))
+    print('Number of training batches: ' + str(len(training_generator)))
 
     print('Building validation generator...')
     validation_generator = DataGenerator(h5files[n_train:n_train_val], batch_size=batch_size, shuffle=shuffle)
-    print('Number of validation events: ' + str(len(validation_generator)))
+    print('Number of validation batches: ' + str(len(validation_generator)))
 
     print('Building test generator...')
     test_generator = DataGenerator(h5files[n_train_val:], batch_size=batch_size, shuffle=False)
-    print('Number of test events: ' + str(len(test_generator)))
+    print('Number of test batches: ' + str(len(test_generator)))
 
     # define the network model
     model = Sequential()
