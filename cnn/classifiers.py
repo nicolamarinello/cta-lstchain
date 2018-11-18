@@ -61,3 +61,31 @@ class ClassifierV2:
         return self.model
 
 
+class ClassifierV3:
+
+    def __init__(self, img_rows, img_cols):
+
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.model = Sequential()   # define the network model
+
+    def get_model(self):
+
+        self.model = Sequential([
+            Conv2D(64, (3, 3), input_shape=(1, self.img_rows, self.img_cols), activation='relu'),
+            Conv2D(64, (3, 3), activation='relu'),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
+            Conv2D(128, (3, 3), activation='relu'),
+            Conv2D(128, (3, 3), activation='relu'),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
+            Conv2D(256, (3, 3), activation='relu'),
+            Conv2D(256, (3, 3), activation='relu'),
+            Conv2D(256, (3, 3), activation='relu'),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
+            Flatten(),
+            Dense(4096, activation='relu'),
+            Dense(4096, activation='relu'),
+            Dense(1000, activation='softmax')
+        ])
+
+        return self.model
