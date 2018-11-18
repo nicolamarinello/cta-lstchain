@@ -56,7 +56,7 @@ class ClassifierV2:
         self.model.add(Dropout(0.4))
         self.model.add(Dense(128, activation="relu"))
         self.model.add(Dropout(0.4))
-        self.model.add(Dense(10, activation="softmax"))
+        self.model.add(Dense(units=1, activation="sigmoid"))
 
         return self.model
 
