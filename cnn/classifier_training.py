@@ -66,9 +66,11 @@ if __name__ == "__main__":
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     if model_name == 'ClassifierV1':
-        model = ClassifierV1(img_rows, img_cols)
+        class_v1 = ClassifierV1(img_rows, img_cols)
+        model = class_v1.get_model()
     if model_name == 'ClassifierV2':
-        model = ClassifierV2(img_rows, img_cols)
+        class_v2 = ClassifierV2(img_rows, img_cols)
+        model = class_v2.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
