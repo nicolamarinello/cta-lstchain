@@ -72,7 +72,7 @@ class ClassifierV3:
     def get_model(self):
 
         self.model = Sequential([
-            Conv2D(64, (3, 3), input_shape=(1, self.img_rows, self.img_cols), activation='relu'),
+            Conv2D(64, (3, 3), input_shape=(1, self.img_rows, self.img_cols), data_format='channels_first', activation='relu'),
             Conv2D(64, (3, 3), activation='relu'),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Conv2D(128, (3, 3), activation='relu'),
