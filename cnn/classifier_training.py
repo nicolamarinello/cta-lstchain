@@ -1,7 +1,7 @@
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3
 from os import listdir, mkdir
 from os.path import isfile, join
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, ModelCheckpoint
 from time import time
 import random
 from generator import DataGenerator
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
     model_name = FLAGS.model
+    print(model_name)
     shuffle = True
 
     folders = FLAGS.dirs
@@ -68,10 +69,10 @@ if __name__ == "__main__":
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
         model = class_v1.get_model()
-    if model_name == 'ClassifierV2':
+    elif model_name == 'ClassifierV2':
         class_v2 = ClassifierV2(img_rows, img_cols)
         model = class_v2.get_model()
-    if model_name == 'ClassifierV3':
+    elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
     else:
@@ -85,15 +86,17 @@ if __name__ == "__main__":
     
     model.summary()
 
+    checkpoint = ModelCheckpoint(filepath=root_dir + '/LST_classifier_' + model_name + '_{epoch:02d}_{val_loss:.2f}_{val_acc:.2f}.h5')
+
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
     history = LossHistory()
 
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1,
-                        use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history])
+                        use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history, checkpoint])
 
     # save the model
-    model.save(root_dir + '/LST_classifier_' + model_name + '_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
+    model.save(root_dir + '/LST_classifier_' + model_name + '.h5')
 
     # save results
     with open(root_dir + '/train-history', 'wb') as file_pi:
