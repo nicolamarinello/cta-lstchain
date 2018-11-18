@@ -186,13 +186,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.')
+        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.', required=True)
     parser.add_argument(
-        '--rem_org', type=str, default='0', help='Select 1 to remove the original files.')
+        '--rem_org', type=str, default='0', help='Select 1 to remove the original files.', required=True)
     parser.add_argument(
-        '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.')
+        '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.', required=True)
     parser.add_argument(
-        '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.')
+        '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.',
+        required=True)
 
     FLAGS, unparsed = parser.parse_known_args()
 

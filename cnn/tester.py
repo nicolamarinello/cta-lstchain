@@ -24,13 +24,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--dirs', type=str, default='', nargs='+', help='Folders that contains test data.')
+        '--dirs', type=str, default='', nargs='+', help='Folders that contains test data.', required=True)
     parser.add_argument(
-        '--model', type=str, default='', help='Path of the model to load.')
+        '--model', type=str, default='', help='Path of the model to load.', required=True)
     parser.add_argument(
-        '--batch_size', type=int, default=10, help='Batch size.')
+        '--batch_size', type=int, default=10, help='Batch size.', required=True)
     parser.add_argument(
-        '--workers', type=int, default=1, help='Number of workers.')
+        '--workers', type=int, default=1, help='Number of workers.', required=True)
 
     FLAGS, unparsed = parser.parse_known_args()
 

@@ -4,6 +4,7 @@ from ctapipe.visualization import CameraDisplay
 from astropy import units as u
 from scipy.interpolate import griddata
 import tables
+import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -11,9 +12,16 @@ import time
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--file', type=str, default='', help='File path where to find the data.')
+
+    FLAGS, unparsed = parser.parse_known_args()
+
     # data path
     #data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun13316-33715___cta-prod3_desert-2150m-Paranal-HB9.h5'
-    data_path = '/Users/nicolamarinello/ctasoft/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun5865-23126___cta-prod3_desert-2150m-Paranal-HB9_cone10.h5'
+    data_path = FLAGS.file
     data = tables.open_file(data_path)
 
     # acquire the data
@@ -133,4 +141,5 @@ if __name__ == "__main__":
                 #plt.gcf().set_size_inches(10, 10)
                 # plt.savefig('foo.png')
                 # plt.show()
-                plt.pause(0.1)
+                #plt.pause(0.1)
+                plt.waitforbuttonpress()

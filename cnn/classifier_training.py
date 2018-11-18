@@ -1,5 +1,4 @@
-from keras.models import Sequential
-from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D
+from classifiers import ClassifierV1, ClassifierV2
 from os import listdir, mkdir
 from os.path import isfile, join
 from keras.callbacks import TensorBoard
@@ -10,6 +9,7 @@ from losshistory import LossHistory
 import argparse
 import datetime
 import pickle
+import sys
 import numpy as np
 
 
@@ -29,13 +29,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.')
+        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
     parser.add_argument(
-        '--epochs', type=int, default=10, help='Number of epochs.')
+        '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
-        '--batch_size', type=int, default=10, help='Batch size.')
+        '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
-        '--workers', type=int, default='', help='Number of workers.')
+        '--batch_size', type=int, default=10, help='Batch size.', required=True)
+    parser.add_argument(
+        '--workers', type=int, default='', help='Number of workers.', required=True)
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -43,14 +45,10 @@ if __name__ == "__main__":
     img_rows, img_cols = 100, 100
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
+    model_name = FLAGS.model
     shuffle = True
 
     folders = FLAGS.dirs
-
-    # create a folder to keep model & results
-    now = datetime.datetime.now()
-    root_dir = now.strftime("%Y-%m-%d_%H-%M")
-    mkdir(root_dir)
 
     h5files = get_all_files(folders)
     random.shuffle(h5files)
@@ -67,18 +65,18 @@ if __name__ == "__main__":
     validation_generator = DataGenerator(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
     print('Number of validation batches: ' + str(len(validation_generator)))
 
-    # define the network model
-    model = Sequential()
+    if model_name == 'ClassifierV1':
+        model = ClassifierV1(img_rows, img_cols)
+    if model_name == 'ClassifierV2':
+        model = ClassifierV2(img_rows, img_cols)
+    else:
+        print('Model name not valid')
+        sys.exit(1)
 
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu',
-                     input_shape=(1, img_rows, img_cols), data_format='channels_first'))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(units=1, activation='sigmoid'))
+    # create a folder to keep model & results
+    now = datetime.datetime.now()
+    root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
+    mkdir(root_dir)
     
     model.summary()
 
@@ -90,7 +88,7 @@ if __name__ == "__main__":
                         use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history])
 
     # save the model
-    model.save(root_dir + '/LST_classifier_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
+    model.save(root_dir + '/LST_classifier_' + model_name + '_' + str(now.strftime("%Y-%m-%d_%H-%M")) + '.h5')
 
     # save results
     with open(root_dir + '/train-history', 'wb') as file_pi:
