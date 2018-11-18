@@ -85,7 +85,7 @@ class ClassifierV3:
             Flatten(),
             Dense(4096, activation='relu'),
             Dense(4096, activation='relu'),
-            Dense(1000, activation='softmax')
+            Dense(1, activation='sigmoid')
         ])
 
         return self.model
