@@ -4,9 +4,6 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
-
 
 if __name__ == "__main__":
 
@@ -26,7 +23,7 @@ if __name__ == "__main__":
         accuracy = x['accuracy']
         val_accuracy = x['val_accuracy']
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, sharex=True)
+    fig, axs = plt.subplots(nrows=1, ncols=2)
 
     ax = axs[0]
     ax.plot(losses)
@@ -35,7 +32,6 @@ if __name__ == "__main__":
     ax.set_title('Training loss')
     ax.grid(True)
 
-
     ax = axs[1]
     ax.plot(accuracy)
     ax.set_xlabel('Batch iteration [i]')
@@ -43,7 +39,7 @@ if __name__ == "__main__":
     ax.set_title('Training accuracy')
     ax.grid(True)
 
-    fig.suptitle('Errorbar subsampling for better appearance')
+    fig.suptitle('Training history')
 
     plt.show()
 
