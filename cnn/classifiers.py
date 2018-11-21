@@ -1,6 +1,6 @@
 from keras.models import Sequential
 from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, BatchNormalization
-
+from keras import regularizers
 
 class ClassifierV1:
 
@@ -35,20 +35,22 @@ class ClassifierV2:
 
     def get_model(self):
 
+        weight_decay = 1e-4
+
         self.model.add(Conv2D(32, kernel_size=5, input_shape=(1, self.img_rows, self.img_cols),
-                              data_format='channels_first', activation='relu'))
+                              data_format='channels_first', kernel_regularizer=regularizers.l2(weight_decay), activation='relu'))
         self.model.add(Conv2D(32, kernel_size=5, activation='relu'))
         self.model.add(MaxPooling2D(2, 2))
         self.model.add(BatchNormalization())
         self.model.add(Dropout(0.4))
 
-        self.model.add(Conv2D(64, kernel_size=3, activation='relu'))
-        self.model.add(Conv2D(64, kernel_size=3, activation='relu'))
+        self.model.add(Conv2D(64, kernel_size=3, kernel_regularizer=regularizers.l2(weight_decay), activation='relu'))
+        self.model.add(Conv2D(64, kernel_size=3, kernel_regularizer=regularizers.l2(weight_decay), activation='relu'))
         self.model.add(MaxPooling2D(2, 2))
         self.model.add(BatchNormalization())
         self.model.add(Dropout(0.4))
 
-        self.model.add(Conv2D(128, kernel_size=3, activation='relu'))
+        self.model.add(Conv2D(128, kernel_size=3, kernel_regularizer=regularizers.l2(weight_decay), activation='relu'))
         self.model.add(BatchNormalization())
 
         self.model.add(Flatten())
