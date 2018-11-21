@@ -17,11 +17,11 @@ class LossHistory(keras.callbacks.Callback):
         self.val_accuracy = []
         self.dic = {}
 
-    def on_batch_end(self, batch, logs={}):
-        self.losses.append(logs.get('loss'))
-        self.val_losses.append(logs.get('val_loss'))
-        self.accuracy.append(logs.get('acc'))
-        self.val_accuracy.append(logs.get('val_acc'))
+    # def on_batch_end(self, batch, logs={}):
+        # self.losses.append(logs.get('loss'))
+        # self.val_losses.append(logs.get('val_loss'))
+        # self.accuracy.append(logs.get('acc'))
+        # self.val_accuracy.append(logs.get('val_acc'))
 
     def on_epoch_end(self, epoch, logs={}):
         self.losses.append(logs.get('loss'))
