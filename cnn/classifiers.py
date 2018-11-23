@@ -104,16 +104,15 @@ class ClassifierV4:
 
     def get_model(self):
 
-        self.model.add(Conv2D(32, kernel_size=5, input_shape=(1, self.img_rows, self.img_cols),
+        self.model.add(Conv2D(32, kernel_size=3, input_shape=(1, self.img_rows, self.img_cols),
                               data_format='channels_first', activation='relu'))
-        self.model.add(Conv2D(32, kernel_size=5, activation='relu'))
+        self.model.add(Conv2D(32, kernel_size=3, activation='relu'))
         self.model.add(MaxPooling2D(2, 2))
         self.model.add(BatchNormalization())
         self.model.add(Dropout(0.4))
 
-        self.model.add(Conv2D(32, kernel_size=5, input_shape=(1, self.img_rows, self.img_cols),
-                              data_format='channels_first', activation='relu'))
-        self.model.add(Conv2D(32, kernel_size=5, activation='relu'))
+        self.model.add(Conv2D(32, kernel_size=3, activation='relu'))
+        self.model.add(Conv2D(32, kernel_size=3, activation='relu'))
         self.model.add(MaxPooling2D(2, 2))
         self.model.add(BatchNormalization())
         self.model.add(Dropout(0.4))
