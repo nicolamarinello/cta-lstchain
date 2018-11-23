@@ -1,4 +1,4 @@
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ClassifierV4
 from os import listdir, mkdir
 from os.path import isfile, join
 from keras.callbacks import TensorBoard, ModelCheckpoint
@@ -80,6 +80,9 @@ if __name__ == "__main__":
     elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
+    elif model_name == 'ClassifierV4':
+        class_v4 = ClassifierV4(img_rows, img_cols)
+        model = class_v4.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
