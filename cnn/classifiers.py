@@ -78,22 +78,20 @@ class ClassifierV3:
 
     def get_model(self):
 
-        self.model = Sequential([
-            Conv2D(64, (3, 3), input_shape=(1, self.img_rows, self.img_cols), data_format='channels_first', activation='relu'),
-            Conv2D(64, (3, 3), activation='relu'),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
-            Conv2D(128, (3, 3), activation='relu'),
-            Conv2D(128, (3, 3), activation='relu'),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
-            Conv2D(256, (3, 3), activation='relu'),
-            Conv2D(256, (3, 3), activation='relu'),
-            Conv2D(256, (3, 3), activation='relu'),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
-            Flatten(),
-            Dense(4096, activation='relu'),
-            Dense(4096, activation='relu'),
-            Dense(1, activation='sigmoid')
-        ])
+        self.model.add(Conv2D(64, (3, 3), input_shape=(1, self.img_rows, self.img_cols), data_format='channels_first', activation='relu'))
+        self.model.add(Conv2D(64, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(128, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(Conv2D(128, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(256, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(Conv2D(256, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(Conv2D(256, (3, 3), data_format='channels_first', activation='relu'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Flatten())
+        self.model.add(Dense(4096, activation='relu'))
+        self.model.add(Dense(4096, activation='relu'))
+        self.model.add(Dense(1, activation='sigmoid'))
 
         return self.model
 
