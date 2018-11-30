@@ -72,7 +72,7 @@ if __name__ == "__main__":
     validation_generator = DataGenerator(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
     print('Number of validation batches: ' + str(len(validation_generator)))
 
-    class_weight = {0: 1., 1: train_protons/train_gammas}
+    # class_weight = {0: 1., 1: train_protons/train_gammas}
 
     print(class_weight)
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.fit_generator(generator=training_generator,
                         validation_data=validation_generator,
-                        class_weight=class_weight,
+                        # class_weight=class_weight,
                         epochs=epochs,
                         verbose=1,
                         use_multiprocessing=True,
