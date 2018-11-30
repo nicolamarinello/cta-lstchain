@@ -1,7 +1,7 @@
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ClassifierV4
 from os import listdir, mkdir
 from os.path import isfile, join
-from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from time import time
 import random
 from generator import DataGenerator
@@ -48,6 +48,7 @@ if __name__ == "__main__":
     model_name = FLAGS.model
     print(model_name)
     shuffle = True
+    PATIENCE = 10
 
     folders = FLAGS.dirs
 
@@ -98,14 +99,26 @@ if __name__ == "__main__":
     
     model.summary()
 
-    checkpoint = ModelCheckpoint(filepath=root_dir + '/LST_classifier_' + model_name + '_{epoch:02d}_{val_loss:.2f}_{val_acc:.2f}.h5')
+    checkpoint = ModelCheckpoint(
+        filepath=root_dir + '/LST_classifier_' + model_name + '_{epoch:02d}_{val_loss:.2f}_{val_acc:.2f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
     history = LossHistory()
 
+    # Early stopping callback
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.005, patience=PATIENCE, verbose=0, mode='auto')
+
+    callbacks = [tensorboard, history, checkpoint, early_stopping]
+
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.fit_generator(generator=training_generator, validation_data=validation_generator, class_weight=class_weight, epochs=epochs, verbose=1,
-                        use_multiprocessing=True, workers=FLAGS.workers, callbacks=[tensorboard, history, checkpoint])
+    model.fit_generator(generator=training_generator,
+                        validation_data=validation_generator,
+                        class_weight=class_weight,
+                        epochs=epochs,
+                        verbose=1,
+                        use_multiprocessing=True,
+                        workers=FLAGS.workers,
+                        callbacks=callbacks)
 
     # save the model
     model.save(root_dir + '/LST_classifier_' + model_name + '.h5')
