@@ -37,6 +37,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--batch_size', type=int, default=10, help='Batch size.', required=True)
     parser.add_argument(
+        '--patience', type=int, default=10, help='Patience.', required=True)
+    parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
 
     FLAGS, unparsed = parser.parse_known_args()
@@ -74,7 +76,7 @@ if __name__ == "__main__":
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
 
-    print(class_weight)
+    # print(class_weight)
 
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     history = LossHistory()
 
     # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.005, patience=PATIENCE, verbose=0, mode='auto')
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.005, patience=PATIENCE, verbose=1, mode='auto')
 
     callbacks = [tensorboard, history, checkpoint, early_stopping]
 
