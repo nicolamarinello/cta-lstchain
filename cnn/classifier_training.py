@@ -50,7 +50,7 @@ if __name__ == "__main__":
     model_name = FLAGS.model
     print(model_name)
     shuffle = True
-    PATIENCE = 10
+    PATIENCE = FLAGS.patience
 
     folders = FLAGS.dirs
 
