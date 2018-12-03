@@ -65,16 +65,16 @@ class ClassifierV3:
     def get_model(self):
 
         self.model.add(Conv2D(16, (5, 5), input_shape=(1, self.img_rows, self.img_cols),
-                              data_format='channels_first', activation=elu(alpha=1.0)))
-        self.model.add(Conv2D(16, (5, 5), data_format='channels_first', activation=elu(alpha=1.0)))
+                              data_format='channels_first', activation='elu'))
+        self.model.add(Conv2D(16, (5, 5), data_format='channels_first', activation='elu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
         self.model.add(Dropout(0.25))
-        self.model.add(Conv2D(32, (5, 5), data_format='channels_first', activation=elu(alpha=1.0)))
-        self.model.add(Conv2D(32, (5, 5), data_format='channels_first', activation=elu(alpha=1.0)))
+        self.model.add(Conv2D(32, (5, 5), data_format='channels_first', activation='elu'))
+        self.model.add(Conv2D(32, (5, 5), data_format='channels_first', activation='elu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
         self.model.add(Dropout(0.25))
         self.model.add(Flatten())
-        self.model.add(Dense(128, activation=elu(alpha=1.0)))
+        self.model.add(Dense(128, activation='elu'))
         self.model.add(Dropout(0.4))
         self.model.add(Dense(1, activation='sigmoid'))
 
