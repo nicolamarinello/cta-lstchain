@@ -85,7 +85,7 @@ if __name__ == "__main__":
         class_v2 = ClassifierV2(img_rows, img_cols)
         model = class_v2.get_model()
     elif model_name == 'ClassifierV3':
-        class_v3 = ClassifierV2(img_rows, img_cols)
+        class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
     else:
         print('Model name not valid')
