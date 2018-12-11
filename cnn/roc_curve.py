@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 import argparse
@@ -58,4 +58,6 @@ if __name__ == "__main__":
 
     fig.suptitle(r'ROC and $\zeta$ distribution')
 
-    plt.show()
+    fig.savefig('ROC.png')
+
+    # plt.show()

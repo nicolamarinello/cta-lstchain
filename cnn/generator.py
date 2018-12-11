@@ -34,6 +34,10 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         x, y = self.__data_generation(indexes)
 
+        # print("training idx: ", indexes)
+
+        print("training idx: ", indexes)
+
         return x, y
 
     def get_indexes(self):
@@ -108,8 +112,12 @@ class DataGenerator(keras.utils.Sequence):
         x = np.empty([self.batch_size, 100, 100])
         y = np.empty([self.batch_size], dtype=int)
 
+        print('data_generator')
+
         # Generate data
         for i, row in enumerate(indexes):
+
+            print(row[0])
 
             filename = self.h5files[row[0]]
 
@@ -121,6 +129,11 @@ class DataGenerator(keras.utils.Sequence):
             x[i, ] = image
             # Store class
             y[i] = row[2]
+
+            # if y[i] == 0:
+            #    x[i,] = np.full((100, 100), 0)
+            # if y[i] == 1:
+            #    x[i,] = np.full((100, 100), 1)
 
         x = x.reshape(x.shape[0], 1, 100, 100)
 

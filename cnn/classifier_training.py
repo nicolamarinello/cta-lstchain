@@ -105,7 +105,7 @@ if __name__ == "__main__":
     history = LossHistory()
 
     # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.005, patience=PATIENCE, verbose=1, mode='auto')
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='auto')
 
     callbacks = [tensorboard, history, checkpoint, early_stopping]
 
@@ -117,6 +117,7 @@ if __name__ == "__main__":
                         verbose=1,
                         use_multiprocessing=True,
                         workers=FLAGS.workers,
+                        shuffle=False,
                         callbacks=callbacks)
 
     # save the model
