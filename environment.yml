@@ -1,0 +1,10 @@
+name: cta
+channels:
+  - default
+  - cta-observatory
+  - conda-forge
+dependencies:
+  - python>3.5
+  - ctapipe
+  - pip:
+      - pytest_runner
