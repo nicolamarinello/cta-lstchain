@@ -46,7 +46,9 @@ class ClassifierV2:
         self.model.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
         self.model.add(Dropout(0.25))
         self.model.add(Flatten())
-        self.model.add(Dense(64, activation='relu'))
+        self.model.add(Dense(128, activation='relu'))
+        self.model.add(Dropout(0.25))
+        self.model.add(Dense(256, activation='relu'))
         self.model.add(Dropout(0.25))
         self.model.add(Dense(1, activation='sigmoid'))
 

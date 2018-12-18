@@ -2,6 +2,8 @@ from classifiers import ClassifierV1, ClassifierV2, ClassifierV3
 from os import listdir, mkdir
 from os.path import isfile, join
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from keras import backend as K
+import tensorflow as tf
 from time import time
 import random
 from generator import DataGenerator
@@ -23,6 +25,40 @@ def get_all_files(folders):
 
     return all_files
 
+def f1(y_true, y_pred):
+    def recall(y_true, y_pred):
+        """Recall metric.
+
+        Only computes a batch-wise average of recall.
+
+        Computes the recall, a metric for multi-label classification of
+        how many relevant items are selected.
+        """
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+        recall = true_positives / (possible_positives + K.epsilon())
+        return recall
+
+    def precision(y_true, y_pred):
+        """Precision metric.
+
+        Only computes a batch-wise average of precision.
+
+        Computes the precision, a metric for multi-label classification of
+        how many selected items are relevant.
+        """
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+        precision = true_positives / (predicted_positives + K.epsilon())
+        return precision
+    precision = precision(y_true, y_pred)
+    recall = recall(y_true, y_pred)
+    return 2*((precision*recall)/(precision+recall+K.epsilon()))
+
+def auc_roc(y_true, y_pred):
+    # any tensorflow metric
+    value, update_op = tf.metrics.auc(y_true, y_pred)
+    return update_op
 
 if __name__ == "__main__":
 
@@ -105,11 +141,11 @@ if __name__ == "__main__":
     history = LossHistory()
 
     # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='auto')
+    #early_stopping = EarlyStopping(monitor='val_f1', min_delta=0.001, patience=PATIENCE, verbose=1, mode='auto')
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping]
+    callbacks = [tensorboard, history, checkpoint,] # early_stopping]
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
     model.fit_generator(generator=training_generator,
                         validation_data=validation_generator,
                         # class_weight=class_weight,
