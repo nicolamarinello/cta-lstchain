@@ -58,6 +58,7 @@ def f1(y_true, y_pred):
 def auc_roc(y_true, y_pred):
     # any tensorflow metric
     value, update_op = tf.metrics.auc(y_true, y_pred)
+    K.get_session().run(tf.local_variables_initializer())
     return update_op
 
 if __name__ == "__main__":
@@ -141,20 +142,26 @@ if __name__ == "__main__":
     history = LossHistory()
 
     # Early stopping callback
-    #early_stopping = EarlyStopping(monitor='val_f1', min_delta=0.001, patience=PATIENCE, verbose=1, mode='auto')
+    early_stopping = EarlyStopping(monitor='val_auc_roc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
 
-    callbacks = [tensorboard, history, checkpoint,] # early_stopping]
+    callbacks = [tensorboard, history, checkpoint, early_stopping]
 
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
-    model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
-                        # class_weight=class_weight,
-                        epochs=epochs,
-                        verbose=1,
-                        use_multiprocessing=True,
-                        workers=FLAGS.workers,
-                        shuffle=False,
-                        callbacks=callbacks)
+    #model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
+    
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc])
+    
+    model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
+
+    #model.fit_generator(generator=training_generator,
+    #                    validation_data=validation_generator,
+    #                    # class_weight=class_weight,
+    #                    epochs=epochs,
+    #                    verbose=1,
+    #                    use_multiprocessing=True,
+    #                    workers=FLAGS.workers,
+    #                    shuffle=False,
+    #                    #callbacks=callbacks
+    #                    )
 
     # save the model
     model.save(root_dir + '/LST_classifier_' + model_name + '.h5')
