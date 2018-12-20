@@ -136,7 +136,7 @@ if __name__ == "__main__":
     model.summary()
 
     checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/LST_classifier_' + model_name + '_{epoch:02d}_{val_loss:.2f}_{val_acc:.2f}.h5')
+        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_auc_roc:.5f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
     history = LossHistory()
@@ -146,9 +146,9 @@ if __name__ == "__main__":
 
     callbacks = [tensorboard, history, checkpoint, early_stopping]
 
-    #model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
+    # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
     
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', auc_roc])
     
     model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
 
@@ -162,9 +162,6 @@ if __name__ == "__main__":
     #                    shuffle=False,
     #                    #callbacks=callbacks
     #                    )
-
-    # save the model
-    model.save(root_dir + '/LST_classifier_' + model_name + '.h5')
 
     # save results
     with open(root_dir + '/train-history', 'wb') as file_pi:
