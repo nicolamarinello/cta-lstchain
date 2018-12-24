@@ -188,12 +188,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.', required=True)
     parser.add_argument(
-        '--rem_org', type=str, default='0', help='Select 1 to remove the original files.', required=True)
+        '--rem_org', type=str, default='0', help='Select 1 to remove the original files.', required=False)
     parser.add_argument(
-        '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.', required=True)
+        '--rem_corr', type=str, default='0', help='Select 1 to remove corrupted files.', required=False)
     parser.add_argument(
         '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.',
-        required=True)
+        required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
 

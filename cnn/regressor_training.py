@@ -63,11 +63,11 @@ if __name__ == "__main__":
     print('Building training generator...')
     training_generator = DataGeneratorR(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
-    train_idxs = training_generator.get_indexes()
-    train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
-    train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
-    print('Number of training gammas: ' + str(train_gammas))
-    print('Number of training protons: ' + str(train_protons))
+    # train_idxs = training_generator.get_indexes()
+    # train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
+    # train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
+    # print('Number of training gammas: ' + str(train_gammas))
+    # print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
     validation_generator = DataGeneratorR(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
