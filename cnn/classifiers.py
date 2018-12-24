@@ -26,6 +26,8 @@ class ClassifierV1:
 
         return self.model
 
+# TODO: batch normalization?
+
 
 class ClassifierV2:
 
