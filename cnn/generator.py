@@ -5,7 +5,7 @@ import multiprocessing
 import os
 
 
-class DataGenerator(keras.utils.Sequence):
+class DataGeneratorC(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, h5files, batch_size=32, shuffle=True):
         self.batch_size = batch_size
@@ -18,7 +18,6 @@ class DataGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        # TODO: check whether this method is called just one time, otherwise it starts to be a bit expensive
         # total number of images in the dataset
         return int(np.floor(self.n_images/self.batch_size))
 
@@ -61,9 +60,9 @@ class DataGenerator(keras.utils.Sequence):
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
-            length = len(h5f['LST/LST_image_charge_interp'][:])  # TODO: make this line more light as in DataGeneratorR
+            lst_idx = h5f['LST/LST_event_index'][1:]
             h5f.close()
-            r = np.arange(length)
+            r = np.arange(len(lst_idx))
 
             fn_basename = os.path.basename(os.path.normpath(f))
 
@@ -88,10 +87,18 @@ class DataGenerator(keras.utils.Sequence):
 
         processes = []
 
-        for i in range(cpu_n):  # TODO: write and test the two cases as in DataGeneratorR
-            p = multiprocessing.Process(target=self.worker, args=(h5f[i], pos[i], i, return_dict))
-            p.start()
-            processes.append(p)
+        if cpu_n >= len(self.h5files):
+            # print('ncpus >= num_files')
+            for i, f in enumerate(self.h5files):
+                p = multiprocessing.Process(target=self.worker, args=([f], [i], i, return_dict))
+                p.start()
+                processes.append(p)
+        else:
+            # print('ncpus < num_files')
+            for i in range(cpu_n):
+                p = multiprocessing.Process(target=self.worker, args=(h5f[i], pos[i], i, return_dict))
+                p.start()
+                processes.append(p)
 
         for p in processes:
             p.join()
@@ -153,7 +160,6 @@ class DataGeneratorR(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        # TODO: check whether this method is called just one time, otherwise it starts to be a bit expensive
         # total number of images in the dataset
         return int(np.floor(self.n_images/self.batch_size))
 

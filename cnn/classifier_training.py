@@ -6,7 +6,7 @@ from keras import backend as K
 import tensorflow as tf
 from time import time
 import random
-from generator import DataGenerator
+from generator import DataGeneratorC
 from losshistory import LossHistory
 import argparse
 import datetime
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     # Generators
     print('Building training generator...')
-    training_generator = DataGenerator(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
+    training_generator = DataGeneratorC(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
-    validation_generator = DataGenerator(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
+    validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
