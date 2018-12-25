@@ -2,9 +2,8 @@ from classifiers import ClassifierV1, ClassifierV2, ClassifierV3
 from os import listdir, mkdir
 from os.path import isfile, join
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
-from keras import backend as K
-import tensorflow as tf
 from time import time
+from metrics import precision, recall
 import random
 from generator import DataGeneratorC
 from losshistory import LossHistory
@@ -25,41 +24,6 @@ def get_all_files(folders):
 
     return all_files
 
-def f1(y_true, y_pred):
-    def recall(y_true, y_pred):
-        """Recall metric.
-
-        Only computes a batch-wise average of recall.
-
-        Computes the recall, a metric for multi-label classification of
-        how many relevant items are selected.
-        """
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-        recall = true_positives / (possible_positives + K.epsilon())
-        return recall
-
-    def precision(y_true, y_pred):
-        """Precision metric.
-
-        Only computes a batch-wise average of precision.
-
-        Computes the precision, a metric for multi-label classification of
-        how many selected items are relevant.
-        """
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-        precision = true_positives / (predicted_positives + K.epsilon())
-        return precision
-    precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)
-    return 2*((precision*recall)/(precision+recall+K.epsilon()))
-
-def auc_roc(y_true, y_pred):
-    # any tensorflow metric
-    value, update_op = tf.metrics.auc(y_true, y_pred)
-    K.get_session().run(tf.local_variables_initializer())
-    return update_op
 
 if __name__ == "__main__":
 
@@ -99,6 +63,8 @@ if __name__ == "__main__":
 
     # Generators
     print('Building training generator...')
+    # h5train = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9970-19922___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9884-34542___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
+    # training_generator = DataGeneratorC(h5train, batch_size=batch_size, shuffle=shuffle)
     training_generator = DataGeneratorC(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
     train_idxs = training_generator.get_indexes()
@@ -108,7 +74,10 @@ if __name__ == "__main__":
     print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
+    # h5val = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9978-21450___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9807-29619___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
+    # validation_generator = DataGeneratorC(h5val, batch_size=batch_size, shuffle=shuffle)
     validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
+
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
@@ -136,23 +105,23 @@ if __name__ == "__main__":
     model.summary()
 
     checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_auc_roc:.5f}.h5')
+        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
     history = LossHistory()
 
     # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_auc_roc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
 
     callbacks = [tensorboard, history, checkpoint, early_stopping]
 
     # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
     
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', auc_roc])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', precision, recall])
     
     model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
 
-    #model.fit_generator(generator=training_generator,
+    # model.fit_generator(generator=training_generator,
     #                    validation_data=validation_generator,
     #                    # class_weight=class_weight,
     #                    epochs=epochs,

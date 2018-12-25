@@ -2,6 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 import argparse
 import math
 import numpy as np
@@ -44,6 +45,13 @@ if __name__ == "__main__":
         g_c[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] >= thr)].count()[0]
         significance[i] = (g_c[i]-p_c[i])/math.sqrt(p_c[i])
         print('Threshold: ', thr, ' Accepted protons: ', p_c[i]/n_test_protons, ' Accepted gammas: ', g_c[i]/n_test_gammas)
+
+    y_gt = df['GroundTruth']
+    y_pr = df['Predicted']
+
+    ar = roc_auc_score(y_gt, y_pr)
+
+    print('AUC_ROC: ', ar)
 
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8,4))
 

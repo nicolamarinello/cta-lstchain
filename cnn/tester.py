@@ -3,7 +3,7 @@ import argparse
 import random
 from os import listdir
 from os.path import isfile, join
-from generator import DataGenerator
+from generator import DataGeneratorC
 import pandas as pd
 import os
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     model = load_model(FLAGS.model)
 
     print('Building test generator...')
-    test_generator = DataGenerator(h5files, batch_size=batch_size, shuffle=False)
+    test_generator = DataGeneratorC(h5files, batch_size=batch_size, shuffle=False)
     print('Number of test batches: ' + str(len(test_generator)))
 
     score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=10, workers=FLAGS.workers,
