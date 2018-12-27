@@ -1,22 +1,10 @@
 from keras.models import load_model
 import argparse
 import random
-from os import listdir
-from os.path import isfile, join
+from utils import get_all_files
 from generator import DataGeneratorC
 import pandas as pd
 import os
-
-
-def get_all_files(folders):
-
-    all_files = []
-
-    for path in folders:
-        files = [join(path, f) for f in listdir(path) if (isfile(join(path, f)) and f.endswith("_interp.h5"))]
-        all_files = all_files + files
-
-    return all_files
 
 
 if __name__ == "__main__":

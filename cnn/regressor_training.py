@@ -1,6 +1,7 @@
 from regressors import RegressorV2
-from os import listdir, mkdir
-from os.path import isfile, join
+from os import mkdir
+from utils import get_all_files
+from keras import optimizers
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from time import time
 import random
@@ -9,18 +10,7 @@ from losshistory import LossHistory
 import argparse
 import datetime
 import pickle
-import sys
 import numpy as np
-
-
-def get_all_files(folders):
-    all_files = []
-
-    for path in folders:
-        files = [join(path, f) for f in listdir(path) if (isfile(join(path, f)) and f.endswith("_interp.h5"))]
-        all_files = all_files + files
-
-    return all_files
 
 
 if __name__ == "__main__":
@@ -108,7 +98,9 @@ if __name__ == "__main__":
 
     callbacks = [tensorboard, history, checkpoint, early_stopping]
 
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
+    # sgd = optimizers.SGD(lr=0.09, decay=1e-6, momentum=0.9, nesterov=True)
+
+    model.compile(optimizer='adam', loss='mean_absolute_error')
 
     model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1,
                         use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
