@@ -21,8 +21,8 @@ if __name__ == "__main__":
     df = pd.read_csv(csv)
 
     r = np.arange(0, 1, 0.01)
-    prot_count = np.zeros(r.shape[0])
-    gamm_count = np.zeros(r.shape[0])
+    fp = np.zeros(r.shape[0])
+    fn = np.zeros(r.shape[0])
     p_c = np.zeros(r.shape[0])
     g_c = np.zeros(r.shape[0])
     significance = np.zeros(r.shape[0])
@@ -34,16 +34,16 @@ if __name__ == "__main__":
     print('Number of gammas in the test set: ', n_test_gammas)
     n_test = df.shape[0]
     for i, thr in enumerate(r):
-        prot_count[i] = df[(df['GroundTruth'] == 0) & (df['Predicted'] >= thr)].count()[0]
-        gamm_count[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] <= thr)].count()[0]
-        tpr[i] = (n_test_gammas - gamm_count[i]) / n_test_gammas
-        fpr[i] = prot_count[i] / n_test
-        print('Proton count: ', prot_count[i], ' Gamma count: ', gamm_count[i])
+        fp[i] = df[(df['GroundTruth'] == 0) & (df['Predicted'] >= thr)].count()[0]
+        fn[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] <= thr)].count()[0]
+        tpr[i] = (n_test_gammas - fn[i]) / n_test_gammas
+        fpr[i] = fp[i] / n_test
+        print('Proton count: ', fp[i], ' Gamma count: ', fn[i])
 
     for i, thr in enumerate(r):
         p_c[i] = df[(df['GroundTruth'] == 0) & (df['Predicted'] >= thr)].count()[0]
         g_c[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] >= thr)].count()[0]
-        significance[i] = (g_c[i]-p_c[i])/math.sqrt(p_c[i])
+        significance[i] = (g_c[i]/n_test_gammas)/math.sqrt(p_c[i]/n_test_protons)
         print('Threshold: ', thr, ' Accepted protons: ', p_c[i]/n_test_protons, ' Accepted gammas: ', g_c[i]/n_test_gammas)
 
     y_gt = df['GroundTruth']
@@ -67,13 +67,13 @@ if __name__ == "__main__":
 
     ax = axs[1]
 
-    ax.plot(prot_count/n_test_protons,  label="Protons")
-    ax.plot(gamm_count/n_test_gammas, label="Gammas")
+    ax.plot(fp / n_test_protons, label="Protons")
+    ax.plot(fn / n_test_gammas, label="Gammas")
     ax.set_title(r'$\zeta$ distribution')
     ax.set_xlabel(r'$\zeta$ [%]')
     ax.set_ylabel('Percentage %')
-    #ax.set_xlim(0, 100)
-    #ax.set_ylim(0, 1)
+    # ax.set_xlim(0, 100)
+    # ax.set_ylim(0, 1)
     ax.grid(True)
     ax.legend(borderaxespad=0.)
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     ax.scatter(r, significance, s=3)
     ax.set_xlabel(r'$\zeta$')
-    ax.set_ylabel('Ng-Np/Sqrt(Np)')
+    ax.set_ylabel('eg/Sqrt(ep)')
 
     fig2.savefig('significance.png', transparent=True)
 

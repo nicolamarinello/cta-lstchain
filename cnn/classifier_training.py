@@ -94,7 +94,7 @@ if __name__ == "__main__":
     model.summary()
 
     checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}.h5')
+        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
     history = LossHistoryC()
