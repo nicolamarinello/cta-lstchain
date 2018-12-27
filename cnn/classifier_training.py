@@ -5,8 +5,8 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from time import time
 from metrics import precision, recall
 import random
-from generator import DataGeneratorC
-from losshistory import LossHistory
+from generators import DataGeneratorC
+from losseshistory import LossHistoryC
 import argparse
 import datetime
 import pickle
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
-    history = LossHistory()
+    history = LossHistoryC()
 
     # Early stopping callback
     early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')

@@ -2,7 +2,7 @@ from keras.models import load_model
 import argparse
 import random
 from utils import get_all_files
-from generator import DataGeneratorC
+from generators import DataGeneratorC
 import pandas as pd
 import os
 
