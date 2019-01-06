@@ -1,4 +1,4 @@
-from regressors import RegressorV2
+from regressors import RegressorV2, RegressorV3
 from os import mkdir
 from utils import get_all_files
 from keras import optimizers
@@ -73,9 +73,9 @@ if __name__ == "__main__":
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(img_rows, img_cols)
         model = class_v2.get_model()
-    # elif model_name == 'ClassifierV3':
-    #    class_v3 = ClassifierV3(img_rows, img_cols)
-    #    model = class_v3.get_model()
+    elif model_name == 'RegressorV3':
+        class_v3 = RegressorV3(img_rows, img_cols)
+        model = class_v3.get_model()
     # else:
     #    print('Model name not valid')
     #    sys.exit(1)
