@@ -149,9 +149,10 @@ class DataGeneratorC(keras.utils.Sequence):
 
 class DataGeneratorR(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, h5files, batch_size=32, shuffle=True):
+    def __init__(self, h5files, feature, batch_size=32, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
+        self.feature = feature
         self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
         self.shuffle = shuffle
         self.n_images = 0
@@ -251,7 +252,7 @@ class DataGeneratorR(keras.utils.Sequence):
         'Generates data containing batch_size samples'
         # Initialization
         x = np.empty([self.batch_size, 100, 100])
-        y = np.empty([self.batch_size, 4], dtype=float)
+        y = np.empty([self.batch_size], dtype=float)
 
         # Generate data
         for i, row in enumerate(indexes):
@@ -264,10 +265,10 @@ class DataGeneratorR(keras.utils.Sequence):
             x[i, ] = h5f['LST/LST_image_charge_interp'][int(row[1])]
 
             # Store features
-            y[i, 0] = h5f['Event_Info/ei_mc_energy'][:][int(row[2])]
-            y[i, 1] = h5f['Event_Info/ei_az'][:][int(row[2])]
-            y[i, 2] = h5f['Event_Info/ei_core_x'][:][int(row[2])]
-            y[i, 3] = h5f['Event_Info/ei_core_y'][:][int(row[2])]
+            if self.feature == 'energy':
+                y[i] = h5f['Event_Info/ei_mc_energy'][:][int(row[2])]
+            elif self.feature == 'az':
+                y[i] = h5f['Event_Info/ei_az'][:][int(row[2])]
 
             h5f.close()
 

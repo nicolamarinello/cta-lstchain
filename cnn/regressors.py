@@ -32,7 +32,7 @@ class RegressorV2:
         self.model.add(Dropout(0.25))
         self.model.add(Dense(1024, activation='relu'))
         self.model.add(Dropout(0.25))
-        self.model.add(Dense(4, activation='linear'))
+        self.model.add(Dense(1, activation='linear'))
 
         return self.model
 
@@ -70,6 +70,6 @@ class RegressorV3:
         self.model.add(Dropout(0.25))
         self.model.add(Dense(1024, activation='relu'))
         self.model.add(Dropout(0.25))
-        self.model.add(Dense(4, activation='linear'))
+        self.model.add(Dense(1, activation='linear'))
 
         return self.model

@@ -26,6 +26,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--batch_size', type=int, default=10, help='Batch size.', required=True)
     parser.add_argument(
+        '--feature', type=str, default='energy', help='Feature to train/predict.', required=True)
+    parser.add_argument(
         '--patience', type=int, default=10, help='Patience.', required=True)
     parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
@@ -41,6 +43,8 @@ if __name__ == "__main__":
     shuffle = True
     PATIENCE = FLAGS.patience
 
+    feature = FLAGS.feature
+
     folders = FLAGS.dirs
 
     h5files = get_all_files(folders)
@@ -51,7 +55,7 @@ if __name__ == "__main__":
 
     # Generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
+    training_generator = DataGeneratorR(h5files[0:n_train], feature=feature, batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
     # train_idxs = training_generator.get_indexes()
     # train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -60,7 +64,7 @@ if __name__ == "__main__":
     # print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
-    validation_generator = DataGeneratorR(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
+    validation_generator = DataGeneratorR(h5files[n_train:], feature=feature, batch_size=batch_size, shuffle=shuffle)
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
@@ -82,7 +86,7 @@ if __name__ == "__main__":
 
     # create a folder to keep model & results
     now = datetime.datetime.now()
-    root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
+    root_dir = now.strftime(model_name + '_' + feature + '_' + '%Y-%m-%d_%H-%M')
     mkdir(root_dir)
 
     model.summary()
