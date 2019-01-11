@@ -25,29 +25,29 @@ if __name__ == "__main__":
 
     epochs = range(1, len(losses) + 1)
 
-    fig.plot(epochs, losses)
-    fig.set_xlabel('Epoch')
-    fig.set_ylabel('Loss [binary_crossentropy]')
-    fig.set_title('Training loss')
-    fig.grid(True)
+    plt.plot(epochs, losses)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss [binary_crossentropy]')
+    plt.title('Training loss')
+    plt.grid(True)
 
-    fig.suptitle('Training history')
+    plt.suptitle('Training history')
 
-    fig.savefig('regressor_training.png', transparent=True)
+    plt.savefig('regressor_training.png', transparent=True)
 
     fig2 = plt.figure(figsize=(10, 4))
 
     epochs = range(1, len(val_losses)+1)
 
-    fig2.plot(epochs, val_losses)
-    fig2.set_xlabel('Epoch')
-    fig2.set_ylabel('Loss [binary_crossentropy]')
-    fig2.set_title('Validation loss')
-    fig2.grid(True)
+    plt.plot(epochs, val_losses)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss [binary_crossentropy]')
+    plt.title('Validation loss')
+    plt.grid(True)
 
-    fig2.suptitle('Validation history')
+    plt.suptitle('Validation history')
 
-    fig2.savefig('regressor_validation.png', transparent=True)
+    plt.savefig('regressor_validation.png', transparent=True)
 
     # plt.show()
 

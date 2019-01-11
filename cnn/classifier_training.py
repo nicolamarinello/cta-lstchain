@@ -1,4 +1,4 @@
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
 from os import mkdir
 from utils import get_all_files
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
@@ -82,6 +82,9 @@ if __name__ == "__main__":
     elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
+    elif model_name == 'ResNet':
+        resnet = CResNet(img_rows, img_cols)
+        model = resnet.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
