@@ -111,9 +111,9 @@ if __name__ == "__main__":
 
     sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
 
-    lrs = LearningRateScheduler(base_lr=0.1, lookback_epochs=10, decay_threshold=0.0001, decay_multiple=0.1, loss_type='val_acc')
+    lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping]
+    callbacks = [tensorboard, history, checkpoint, early_stopping, lrs]
     
     model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
     
