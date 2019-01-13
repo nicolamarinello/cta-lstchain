@@ -35,14 +35,14 @@ if __name__ == "__main__":
     test_generator = DataGeneratorC(h5files, batch_size=batch_size, shuffle=False)
     print('Number of test batches: ' + str(len(test_generator)))
 
-    score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=10, workers=FLAGS.workers,
-                                     use_multiprocessing=True, verbose=1)
+    # score = model.evaluate_generator(generator=test_generator, steps=None, max_queue_size=10, workers=FLAGS.workers,
+    #                                 use_multiprocessing=True, verbose=1)
 
-    print('Test loss: ' + str(score[0]))
-    print('Test accuracy: ' + str(score[1]))
+    # print('Test loss: ' + str(score[0]))
+    # print('Test accuracy: ' + str(score[1]))
 
     predict = model.predict_generator(generator=test_generator, steps=None, max_queue_size=10, workers=FLAGS.workers,
-                                      use_multiprocessing=True, verbose=0)
+                                      use_multiprocessing=True, verbose=1)
 
     pr_labels = predict                                 # predicted labels
     gt_labels = test_generator.get_indexes()[:, 2]      # ground truth labels

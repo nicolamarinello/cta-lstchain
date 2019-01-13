@@ -1,7 +1,9 @@
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
 from os import mkdir
 from utils import get_all_files
+from keras import optimizers
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from lr_scheduler import LearningRateScheduler
 from time import time
 from metrics import precision, recall
 import random
@@ -84,7 +86,7 @@ if __name__ == "__main__":
         model = class_v3.get_model()
     elif model_name == 'ResNet':
         resnet = CResNet(img_rows, img_cols)
-        model = resnet.get_model()
+        model = resnet.get_model(cardinality=1)
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -105,13 +107,27 @@ if __name__ == "__main__":
     # Early stopping callback
     early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping]
-
     # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
+
+    sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
+
+    lrs = LearningRateScheduler(base_lr=0.1, lookback_epochs=10, decay_threshold=0.0001, decay_multiple=0.1, loss_type='val_acc')
+
+    callbacks = [tensorboard, history, checkpoint, early_stopping]
     
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', precision, recall])
+    model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
     
-    model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1, use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
+    model.fit_generator(generator=training_generator,
+                        validation_data=validation_generator,
+                        validation_steps=len(validation_generator),
+                        epochs=epochs,
+                        verbose=1,
+                        use_multiprocessing=True,
+                        workers=FLAGS.workers,
+                        shuffle=False,
+                        callbacks=callbacks)
+
+    # validation_steps=len(validation_generator) should prevent stucking at the end of the epoch
 
     # model.fit_generator(generator=training_generator,
     #                    validation_data=validation_generator,
