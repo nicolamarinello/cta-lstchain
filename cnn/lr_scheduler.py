@@ -27,11 +27,13 @@ class LearningRateScheduler(keras.callbacks.History):
 
         self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs={}):
 
         current_lr = K.get_value(self.model.optimizer.lr)
 
-        current = self.history[self.loss_type]
+        # current = self.history[self.loss_type]
+
+        current = logs.get(self.loss_type)
 
         if self.monitor_op(current - self.min_delta, self.best):
             self.best = current
@@ -40,6 +42,8 @@ class LearningRateScheduler(keras.callbacks.History):
         else:
             self.wait += 1
             if self.wait >= self.patience:
+                self.best = current
+                self.wait = 0
                 print(' '.join(
                     ('Changing learning rate from', str(current_lr), 'to', str(current_lr * self.decay_factor))))
                 K.set_value(self.model.optimizer.lr, current_lr * self.decay_factor)
