@@ -1,6 +1,8 @@
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
 from os import mkdir
 from utils import get_all_files
+from clr import LRFinder
+from clr import OneCycleLR
 from keras import optimizers
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from lr_scheduler import LearningRateScheduler
@@ -54,19 +56,18 @@ if __name__ == "__main__":
 
     # Generators
     print('Building training generator...')
-    # h5train = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9970-19922___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9884-34542___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
-    # training_generator = DataGeneratorC(h5train, batch_size=batch_size, shuffle=shuffle)
+
     training_generator = DataGeneratorC(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
+
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
     train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
+
     print('Number of training gammas: ' + str(train_gammas))
     print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
-    # h5val = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9978-21450___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9807-29619___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
-    # validation_generator = DataGeneratorC(h5val, batch_size=batch_size, shuffle=shuffle)
     validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
 
     print('Number of validation batches: ' + str(len(validation_generator)))
@@ -75,71 +76,87 @@ if __name__ == "__main__":
 
     # print(class_weight)
 
-    if model_name == 'ClassifierV1':
-        class_v1 = ClassifierV1(img_rows, img_cols)
-        model = class_v1.get_model()
-    elif model_name == 'ClassifierV2':
-        class_v2 = ClassifierV2(img_rows, img_cols)
-        model = class_v2.get_model()
-    elif model_name == 'ClassifierV3':
-        class_v3 = ClassifierV3(img_rows, img_cols)
-        model = class_v3.get_model()
-    elif model_name == 'ResNet':
-        resnet = CResNet(img_rows, img_cols)
-        model = resnet.get_model(cardinality=1)
-    else:
-        print('Model name not valid')
-        sys.exit(1)
+    MOMENTUMS = [0.9, 0.95, 0.99]
 
-    # create a folder to keep model & results
-    now = datetime.datetime.now()
-    root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
-    mkdir(root_dir)
-    
-    model.summary()
+    for momentum in MOMENTUMS:
 
-    checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
+        if model_name == 'ClassifierV1':
+            class_v1 = ClassifierV1(img_rows, img_cols)
+            model = class_v1.get_model()
+        elif model_name == 'ClassifierV2':
+            class_v2 = ClassifierV2(img_rows, img_cols)
+            model = class_v2.get_model()
+        elif model_name == 'ClassifierV3':
+            class_v3 = ClassifierV3(img_rows, img_cols)
+            model = class_v3.get_model()
+        elif model_name == 'ResNet':
+            resnet = CResNet(img_rows, img_cols)
+            model = resnet.get_model(cardinality=1)
+        else:
+            print('Model name not valid')
+            sys.exit(1)
 
-    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
-    history = LossHistoryC()
+        # create a folder to keep model & results
+        now = datetime.datetime.now()
+        root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
+        mkdir(root_dir)
 
-    # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
+        model.summary()
 
-    # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
+        checkpoint = ModelCheckpoint(
+            filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
 
-    sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
+        tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+        history = LossHistoryC()
 
-    lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
+        # Early stopping callback
+        early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping, lrs]
-    
-    model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
-    
-    model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
-                        validation_steps=len(validation_generator),
-                        epochs=epochs,
-                        verbose=1,
-                        use_multiprocessing=True,
-                        workers=FLAGS.workers,
-                        shuffle=False,
-                        callbacks=callbacks)
+        # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
 
-    # validation_steps=len(validation_generator) should prevent stucking at the end of the epoch
 
-    # model.fit_generator(generator=training_generator,
-    #                    validation_data=validation_generator,
-    #                    # class_weight=class_weight,
-    #                    epochs=epochs,
-    #                    verbose=1,
-    #                    use_multiprocessing=True,
-    #                    workers=FLAGS.workers,
-    #                    shuffle=False,
-    #                    #callbacks=callbacks
-    #                    )
+        sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
 
-    # save results
-    with open(root_dir + '/train-history', 'wb') as file_pi:
-        pickle.dump(history.dic, file_pi)
+        # basic learning rate scheduler
+        # lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
+
+        # lr finder
+
+        X_val, Y_val = validation_generator.get_all()
+
+        lr_callback = LRFinder( num_samples=len(training_generator)*batch_size,
+                                batch_size=batch_size,
+                                minimum_lr=0.007,
+                                maximum_lr=0.07,
+                                validation_data=(X_val, Y_val),
+                                lr_scale='linear',
+                                save_dir='/root/ctasoft/cta-lstchain/cnn/ResNet_2019-01-15_15-28/momentum/momentum-%s/' % str(momentum))
+
+        # lr manager - onecycleLR
+        # lr_manager = OneCycleLR(len(training_generator)*batch_size,
+        #                        epochs,
+        #                        batch_size,
+        #                        0.3,
+        #                        end_percentage=0.1,
+        #                        maximum_momentum=0.95,
+        #                        minimum_momentum=0.85)
+
+        callbacks = [tensorboard, history, checkpoint, early_stopping, lr_callback]
+
+        model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
+
+        model.fit_generator(generator=training_generator,
+                            validation_data=validation_generator,
+                            validation_steps=len(validation_generator),
+                            epochs=epochs,
+                            verbose=1,
+                            use_multiprocessing=True,
+                            workers=FLAGS.workers,
+                            shuffle=False,
+                            callbacks=callbacks)
+
+        # validation_steps=len(validation_generator) should prevent stucking at the end of the epoch
+
+        # save results
+        with open(root_dir + '/train-history', 'wb') as file_pi:
+            pickle.dump(history.dic, file_pi)

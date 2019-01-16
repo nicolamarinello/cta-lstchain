@@ -42,6 +42,22 @@ class DataGeneratorC(keras.utils.Sequence):
     def get_indexes(self):
         return self.indexes
 
+    def get_all(self):
+
+        # Generate indexes of the batch
+        indexes = self.indexes
+
+        old_bs = self.batch_size
+
+        self.batch_size = len(self.indexes)
+
+        # Generate data
+        x, y = self.__data_generation(indexes)
+
+        self.batch_size = old_bs
+
+        return x, y
+
     def chunkit(self, seq, num):
 
         avg = len(seq) / float(num)
@@ -182,6 +198,22 @@ class DataGeneratorR(keras.utils.Sequence):
 
     def get_indexes(self):
         return self.indexes
+
+    def get_all(self):
+
+        # Generate indexes of the batch
+        indexes = self.indexes
+
+        old_bs = self.batch_size
+
+        self.batch_size = len(self.indexes)
+
+        # Generate data
+        x, y = self.__data_generation(indexes)
+
+        self.batch_size = old_bs
+
+        return x, y
 
     def chunkit(self, seq, num):
 
