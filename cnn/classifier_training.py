@@ -103,7 +103,7 @@ if __name__ == "__main__":
     checkpoint = ModelCheckpoint(
         filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
 
-    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+    # tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
 
     history = LossHistoryC()
 
@@ -114,10 +114,13 @@ if __name__ == "__main__":
 
     csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.txt', separator=',', append=False)
 
-    sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
+    sgd = optimizers.SGD(lr=0.1,
+                         # decay=1e-4,
+                         momentum=0.9,
+                         nesterov=True)
 
     lrop = callbacks.ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=10, verbose=1, mode='auto',
-                                       min_delta=0.0001, cooldown=10, min_lr=0)
+                                       min_delta=0.0001, cooldown=5, min_lr=0.0001)
 
     callbacks = [history, checkpoint, early_stopping, lrop, csv_callback]
     
