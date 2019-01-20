@@ -2,6 +2,7 @@ import keras
 import numpy as np
 import h5py
 import multiprocessing
+# import threading
 import os
 
 
@@ -15,6 +16,7 @@ class DataGeneratorC(keras.utils.Sequence):
         self.n_images = 0
         self.generate_indexes()
         self.on_epoch_end()
+        # self.lock = threading.Lock()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -22,6 +24,10 @@ class DataGeneratorC(keras.utils.Sequence):
         return int(np.floor(self.n_images/self.batch_size))
 
     def __getitem__(self, index):
+
+        # print("training idx: ", index, '/', self.__len__())
+
+        # with self.lock:
         'Generate one batch of data'
         # index goes from 0 to the number of batches
         # Generate indexes of the batch
@@ -32,8 +38,6 @@ class DataGeneratorC(keras.utils.Sequence):
 
         # Generate data
         x, y = self.__data_generation(indexes)
-
-        # print("training idx: ", indexes)
 
         # print("training idx: ", indexes)
 
@@ -119,7 +123,7 @@ class DataGeneratorC(keras.utils.Sequence):
         x = np.empty([self.batch_size, 100, 100])
         y = np.empty([self.batch_size], dtype=int)
 
-        # print('data_generator')
+        # print('__data_generation', indexes)
 
         # Generate data
         for i, row in enumerate(indexes):
@@ -129,11 +133,9 @@ class DataGeneratorC(keras.utils.Sequence):
             filename = self.h5files[row[0]]
 
             h5f = h5py.File(filename, 'r')
-            image = h5f['LST/LST_image_charge_interp'][row[1]]
-            h5f.close()
-
             # Store image
-            x[i, ] = image
+            x[i, ] = h5f['LST/LST_image_charge_interp'][row[1]]
+            h5f.close()
             # Store class
             y[i] = row[2]
 

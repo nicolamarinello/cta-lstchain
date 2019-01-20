@@ -2,11 +2,13 @@ from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
 from os import mkdir
 from utils import get_all_files
 from keras import optimizers
+from keras import callbacks
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
-from lr_scheduler import LearningRateScheduler
+# from lr_scheduler import LearningRateScheduler
 from time import time
 from metrics import precision, recall
 import random
+# import multiprocessing as mp
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
 import argparse
@@ -40,6 +42,8 @@ if __name__ == "__main__":
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
     model_name = FLAGS.model
+    workers = FLAGS.workers
+    print('Workers: ', workers)
     print(model_name)
     shuffle = True
     PATIENCE = FLAGS.patience
@@ -54,10 +58,9 @@ if __name__ == "__main__":
 
     # Generators
     print('Building training generator...')
-    # h5train = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9970-19922___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9884-34542___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
-    # training_generator = DataGeneratorC(h5train, batch_size=batch_size, shuffle=shuffle)
     training_generator = DataGeneratorC(h5files[0:n_train], batch_size=batch_size, shuffle=shuffle)
     print('Number of training batches: ' + str(len(training_generator)))
+
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
     train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
@@ -65,15 +68,14 @@ if __name__ == "__main__":
     print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
-    # h5val = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1/gamma_20deg_0deg_srun9978-21450___cta-prod3_desert-2150m-Paranal-HB9_cone10_interp.h5', '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1/proton_20deg_0deg_srun9807-29619___cta-prod3_desert-2150m-Paranal-HB9_interp.h5']
-    # validation_generator = DataGeneratorC(h5val, batch_size=batch_size, shuffle=shuffle)
     validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
-
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
 
     # print(class_weight)
+
+    # mp.set_start_method('spawn', force=True)
 
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
@@ -102,6 +104,7 @@ if __name__ == "__main__":
         filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
 
     tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+
     history = LossHistoryC()
 
     # Early stopping callback
@@ -109,36 +112,27 @@ if __name__ == "__main__":
 
     # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
 
+    csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.txt', separator=',', append=False)
+
     sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
 
-    lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
+    lrop = callbacks.ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=10, verbose=1, mode='auto',
+                                       min_delta=0.0001, cooldown=10, min_lr=0)
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping, lrs]
+    callbacks = [history, checkpoint, early_stopping, lrop, csv_callback]
     
     model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
     
     model.fit_generator(generator=training_generator,
                         validation_data=validation_generator,
-                        validation_steps=len(validation_generator),
+                        # validation_steps=len(validation_generator),
                         epochs=epochs,
                         verbose=1,
+                        max_queue_size=10,
                         use_multiprocessing=True,
-                        workers=FLAGS.workers,
+                        workers=workers,
                         shuffle=False,
                         callbacks=callbacks)
-
-    # validation_steps=len(validation_generator) should prevent stucking at the end of the epoch
-
-    # model.fit_generator(generator=training_generator,
-    #                    validation_data=validation_generator,
-    #                    # class_weight=class_weight,
-    #                    epochs=epochs,
-    #                    verbose=1,
-    #                    use_multiprocessing=True,
-    #                    workers=FLAGS.workers,
-    #                    shuffle=False,
-    #                    #callbacks=callbacks
-    #                    )
 
     # save results
     with open(root_dir + '/train-history', 'wb') as file_pi:
