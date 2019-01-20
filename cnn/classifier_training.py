@@ -2,6 +2,7 @@ from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
 from os import mkdir
 from utils import get_all_files
 from clr import LRFinder
+from keras import backend as K
 from clr import OneCycleLR
 from keras import optimizers
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
@@ -76,9 +77,16 @@ if __name__ == "__main__":
 
     # print(class_weight)
 
-    MOMENTUMS = [0.9, 0.95, 0.99]
+    MOMENTUMS = [0.8, 0.85, 0.9, 0.95, 0.99]
+
+    print('Getting validation data...')
+    X_val, Y_val = validation_generator.get_all()
 
     for momentum in MOMENTUMS:
+
+        print('MOMENTUM:', momentum)
+
+        K.clear_session()
 
         if model_name == 'ClassifierV1':
             class_v1 = ClassifierV1(img_rows, img_cols)
@@ -114,15 +122,12 @@ if __name__ == "__main__":
 
         # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
 
-
-        sgd = optimizers.SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
+        sgd = optimizers.SGD(lr=0.07, momentum=momentum, nesterov=True)
 
         # basic learning rate scheduler
         # lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
 
         # lr finder
-
-        X_val, Y_val = validation_generator.get_all()
 
         lr_callback = LRFinder( num_samples=len(training_generator)*batch_size,
                                 batch_size=batch_size,
@@ -141,7 +146,7 @@ if __name__ == "__main__":
         #                        maximum_momentum=0.95,
         #                        minimum_momentum=0.85)
 
-        callbacks = [tensorboard, history, checkpoint, early_stopping, lr_callback]
+        callbacks = [history, checkpoint, early_stopping, lr_callback]
 
         model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
 
