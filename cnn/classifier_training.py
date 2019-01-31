@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # Parameters
     img_rows, img_cols = 100, 100
     epochs = FLAGS.epochs
-    batch_size = FLAGS.batch_size
+    batch_size = 64
     model_name = FLAGS.model
     print(model_name)
     shuffle = True
@@ -82,86 +82,64 @@ if __name__ == "__main__":
     print('Getting validation data...')
     X_val, Y_val = validation_generator.get_all()
 
-    for momentum in MOMENTUMS:
+    if model_name == 'ClassifierV1':
+        class_v1 = ClassifierV1(img_rows, img_cols)
+        model = class_v1.get_model()
+    elif model_name == 'ClassifierV2':
+        class_v2 = ClassifierV2(img_rows, img_cols)
+        model = class_v2.get_model()
+    elif model_name == 'ClassifierV3':
+        class_v3 = ClassifierV3(img_rows, img_cols)
+        model = class_v3.get_model()
+    elif model_name == 'ResNet':
+        resnet = CResNet(img_rows, img_cols)
+        model = resnet.get_model(cardinality=1)
+    else:
+        print('Model name not valid')
+        sys.exit(1)
 
-        print('MOMENTUM:', momentum)
+    # create a folder to keep model & results
+    now = datetime.datetime.now()
+    root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
+    mkdir(root_dir)
 
-        K.clear_session()
+    model.summary()
 
-        if model_name == 'ClassifierV1':
-            class_v1 = ClassifierV1(img_rows, img_cols)
-            model = class_v1.get_model()
-        elif model_name == 'ClassifierV2':
-            class_v2 = ClassifierV2(img_rows, img_cols)
-            model = class_v2.get_model()
-        elif model_name == 'ClassifierV3':
-            class_v3 = ClassifierV3(img_rows, img_cols)
-            model = class_v3.get_model()
-        elif model_name == 'ResNet':
-            resnet = CResNet(img_rows, img_cols)
-            model = resnet.get_model(cardinality=1)
-        else:
-            print('Model name not valid')
-            sys.exit(1)
+    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+    history = LossHistoryC()
 
-        # create a folder to keep model & results
-        now = datetime.datetime.now()
-        root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
-        mkdir(root_dir)
+    # Early stopping callback
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
 
-        model.summary()
+    sgd = optimizers.SGD(lr=0.07, momentum=0.9, nesterov=True)
 
-        checkpoint = ModelCheckpoint(
-            filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_acc:.5f}_{val_precision:.5f}_{val_recall:.5f}.h5')
+    # lr finder
 
-        tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
-        history = LossHistoryC()
+    lr_callback = LRFinder( num_samples=len(training_generator)*batch_size-1,
+                            batch_size=batch_size,
+                            minimum_lr=1e-3,
+                            maximum_lr=10,
+                            validation_data=(X_val, Y_val),
+                            lr_scale='exp',
+                            save_dir=root_dir+'/weights/')
 
-        # Early stopping callback
-        early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
+    # lr manager - onecycleLR
+    # lr_manager = OneCycleLR(len(training_generator)*batch_size,
+    #                        epochs,
+    #                        batch_size,
+    #                        0.3,
+    #                        end_percentage=0.1,
+    #                        maximum_momentum=0.95,
+    #                        minimum_momentum=0.85)
 
-        # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
+    callbacks = [lr_callback]
 
-        sgd = optimizers.SGD(lr=0.07, momentum=momentum, nesterov=True)
+    model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
 
-        # basic learning rate scheduler
-        # lrs = LearningRateScheduler(patience=10, min_delta=0.005, decay_factor=0.1, loss_type='val_acc')
-
-        # lr finder
-
-        lr_callback = LRFinder( num_samples=len(training_generator)*batch_size-1,
-                                batch_size=batch_size,
-                                minimum_lr=0.007,
-                                maximum_lr=0.07,
-                                validation_data=(X_val, Y_val),
-                                lr_scale='linear',
-                                save_dir='/root/ctasoft/cta-lstchain/cnn/ResNet_2019-01-15_15-28/momentum/momentum-%s/' % str(momentum))
-
-        # lr manager - onecycleLR
-        # lr_manager = OneCycleLR(len(training_generator)*batch_size,
-        #                        epochs,
-        #                        batch_size,
-        #                        0.3,
-        #                        end_percentage=0.1,
-        #                        maximum_momentum=0.95,
-        #                        minimum_momentum=0.85)
-
-        callbacks = [history, checkpoint, early_stopping, lr_callback]
-
-        model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy', precision, recall])
-
-        model.fit_generator(generator=training_generator,
-                            validation_data=validation_generator,
-                            validation_steps=len(validation_generator),
-                            epochs=epochs,
-                            verbose=1,
-                            use_multiprocessing=True,
-                            workers=FLAGS.workers,
-                            shuffle=False,
-                            callbacks=callbacks)
-
-        # validation_steps=len(validation_generator) should prevent stucking at the end of the epoch
-
-        # save results
-        with open(root_dir + '/train-history', 'wb') as file_pi:
-            pickle.dump(history.dic, file_pi)
+    model.fit_generator(generator=training_generator,
+                        epochs=1,
+                        verbose=1,
+                        use_multiprocessing=True,
+                        workers=FLAGS.workers,
+                        shuffle=False,
+                        callbacks=callbacks)
