@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
         # lr finder
 
-        lr_callback = LRFinder( num_samples=len(training_generator)*batch_size,
+        lr_callback = LRFinder( num_samples=len(training_generator)*batch_size-1,
                                 batch_size=batch_size,
                                 minimum_lr=0.007,
                                 maximum_lr=0.07,
