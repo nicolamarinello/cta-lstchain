@@ -82,64 +82,56 @@ if __name__ == "__main__":
     print('Getting validation data...')
     X_val, Y_val = validation_generator.get_all()
 
-    if model_name == 'ClassifierV1':
-        class_v1 = ClassifierV1(img_rows, img_cols)
-        model = class_v1.get_model()
-    elif model_name == 'ClassifierV2':
-        class_v2 = ClassifierV2(img_rows, img_cols)
-        model = class_v2.get_model()
-    elif model_name == 'ClassifierV3':
-        class_v3 = ClassifierV3(img_rows, img_cols)
-        model = class_v3.get_model()
-    elif model_name == 'ResNet':
-        resnet = CResNet(img_rows, img_cols)
-        model = resnet.get_model(cardinality=1)
-    else:
-        print('Model name not valid')
-        sys.exit(1)
+    for momentum in MOMENTUMS:
 
-    # create a folder to keep model & results
-    now = datetime.datetime.now()
-    root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
-    mkdir(root_dir)
+        print('MOMENTUM:', momentum)
 
-    model.summary()
+        K.clear_session()
 
-    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
-    history = LossHistoryC()
+        if model_name == 'ClassifierV1':
+            class_v1 = ClassifierV1(img_rows, img_cols)
+            model = class_v1.get_model()
+        elif model_name == 'ClassifierV2':
+            class_v2 = ClassifierV2(img_rows, img_cols)
+            model = class_v2.get_model()
+        elif model_name == 'ClassifierV3':
+            class_v3 = ClassifierV3(img_rows, img_cols)
+            model = class_v3.get_model()
+        elif model_name == 'ResNet':
+            resnet = CResNet(img_rows, img_cols)
+            model = resnet.get_model(cardinality=1)
+        else:
+            print('Model name not valid')
+            sys.exit(1)
 
-    # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
+        # create a folder to keep model & results
+        now = datetime.datetime.now()
+        root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
+        mkdir(root_dir)
 
-    sgd = optimizers.SGD(lr=0.07, momentum=0.9, nesterov=True)
+        model.summary()
 
-    # lr finder
+        # lr finder
 
-    lr_callback = LRFinder( num_samples=len(training_generator)*batch_size-1,
-                            batch_size=batch_size,
-                            minimum_lr=1e-3,
-                            maximum_lr=10,
+        lr_callback = LRFinder( num_samples=(len(training_generator)+1)*batch_size,
+                                batch_size=batch_size,
+                                minimum_lr=0.0095,
+                                maximum_lr=0.095,
+                                validation_data=(X_val, Y_val),
+                                lr_scale='linear',
+                                save_dir='/root/ctasoft/cta-lstchain/cnn/ResNet_2019-01-31_14-57/momentum/momentum-%s/' % str(momentum))
+
+        sgd = optimizers.SGD(lr=0.07, momentum=momentum, nesterov=True)
+
+        callbacks = [lr_callback]
+
+        model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
+
+        model.fit_generator(generator=training_generator,
                             validation_data=(X_val, Y_val),
-                            lr_scale='exp',
-                            save_dir=root_dir+'/weights/')
-
-    # lr manager - onecycleLR
-    # lr_manager = OneCycleLR(len(training_generator)*batch_size,
-    #                        epochs,
-    #                        batch_size,
-    #                        0.3,
-    #                        end_percentage=0.1,
-    #                        maximum_momentum=0.95,
-    #                        minimum_momentum=0.85)
-
-    callbacks = [lr_callback]
-
-    model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
-
-    model.fit_generator(generator=training_generator,
-                        epochs=1,
-                        verbose=1,
-                        use_multiprocessing=True,
-                        workers=FLAGS.workers,
-                        shuffle=False,
-                        callbacks=callbacks)
+                            epochs=1,
+                            verbose=1,
+                            use_multiprocessing=True,
+                            workers=FLAGS.workers,
+                            shuffle=False,
+                            callbacks=callbacks)
