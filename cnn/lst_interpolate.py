@@ -4,6 +4,8 @@ from os.path import isfile, join
 from ctapipe.instrument import CameraGeometry
 from astropy import units as u
 from scipy.interpolate import griddata
+from ctapipe.image import hillas_parameters, leakage
+from ctapipe.image.cleaning import tailcuts_clean
 from tables.exceptions import HDF5ExtError, NoSuchNodeError
 import multiprocessing as mp
 import argparse
@@ -84,19 +86,43 @@ def func(paths, ro, rc, rn):
             LST_image_charge = LST_image_charge[1:]
 
             # get camera geometry & camera pixels coordinates
-            geom = CameraGeometry.from_name("LSTCam")
-            points = np.array([np.array(geom.pix_x / u.m),
-                               np.array(geom.pix_y / u.m)]).T
+            camera = CameraGeometry.from_name("LSTCam")
+            points = np.array([np.array(camera.pix_x / u.m),
+                               np.array(camera.pix_y / u.m)]).T
 
             grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
 
             # define the final array that will contain the interpolated images
-            LST_image_charge_interp = np.zeros(
-                (len(LST_image_charge), img_rows, img_cols))
+            # LST_image_charge_interp = np.zeros(
+            #    (len(LST_image_charge), img_rows, img_cols))
+
+            lst_image_charge_interp = np.array([], dtype=np.int64).reshape(0, img_rows, img_cols)
+
+            cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
 
             for i in range(0, len(LST_image_charge)):
-                LST_image_charge_interp[i] = griddata(
-                    points, LST_image_charge[i], (grid_x, grid_y), fill_value=0, method='cubic')
+
+                image = LST_image_charge[i]
+
+                boundary, picture, min_neighbors = cleaning_level['LSTCam']
+                clean = tailcuts_clean(
+                    camera,
+                    image,
+                    boundary_thresh=boundary,
+                    picture_thresh=picture,
+                    min_number_picture_neighbors=min_neighbors
+                )
+
+                if len(np.where(clean > 0)) != 0:
+                    hillas = hillas_parameters(camera[clean], image[clean])
+                    intensity = hillas['intensity']
+
+                    l = leakage(camera, image, clean)
+                    leakage1_intensity = l['leakage1_intensity']
+
+                    if intensity > 50 & leakage1_intensity < 0.2:
+                        interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
+                        lst_image_charge_interp = np.append(lst_image_charge_interp, interp_img, axis=0)
 
             data_p.close()
 
@@ -144,7 +170,7 @@ def func(paths, ro, rc, rn):
             data_file.create_dataset(
                 'LST/LST_image_peak_times', data=np.array(LST_image_peak_times))
             data_file.create_dataset(
-                'LST/LST_image_charge_interp', data=np.array(LST_image_charge_interp))
+                'LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
             data_file.close()
 
             if ro == '1':
