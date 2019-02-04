@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     fig.suptitle('Training history')
 
-    fig.savefig('classifier_training.png', transparent=True)
+    fig.savefig('classifier_training.png', transparent=False)
 
     fig2, axs2 = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     fig2.suptitle('Validation history')
 
-    fig2.savefig('classifier_validation.png', transparent=True)
+    fig2.savefig('classifier_validation.png', transparent=False)
 
     # plt.show()
 

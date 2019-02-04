@@ -2,7 +2,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
+
 import argparse
 import math
 import numpy as np
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     ar = roc_auc_score(y_gt, y_pr)
 
     print('AUC_ROC: ', ar)
+    print('Accuracy: ', accuracy_score(df['GroundTruth'], df['Predicted'].round(), normalize=True))
 
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8,4))
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 
     fig.suptitle(r'ROC and $\zeta$ distribution')
 
-    fig.savefig('ROC.png', transparent=True)
+    fig.savefig('ROC.png', transparent=False)
 
     fig2, axs2 = plt.subplots(nrows=1, ncols=1)
     
@@ -89,6 +91,6 @@ if __name__ == "__main__":
     ax.set_xlabel(r'$\zeta$')
     ax.set_ylabel('eg/Sqrt(ep)')
 
-    fig2.savefig('significance.png', transparent=True)
+    fig2.savefig('significance.png', transparent=False)
 
     # plt.show()

@@ -96,7 +96,8 @@ def func(paths, ro, rc, rn):
             # LST_image_charge_interp = np.zeros(
             #    (len(LST_image_charge), img_rows, img_cols))
 
-            lst_image_charge_interp = np.array([], dtype=np.int64).reshape(0, img_rows, img_cols)
+            lst_image_charge_interp = []
+            acc_idxs = []           # accepted indexes
 
             cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
 
@@ -113,16 +114,19 @@ def func(paths, ro, rc, rn):
                     min_number_picture_neighbors=min_neighbors
                 )
 
-                if len(np.where(clean > 0)) != 0:
+                if len(np.where(clean > 0)[0]) != 0:
                     hillas = hillas_parameters(camera[clean], image[clean])
                     intensity = hillas['intensity']
 
                     l = leakage(camera, image, clean)
                     leakage1_intensity = l['leakage1_intensity']
 
-                    if intensity > 50 & leakage1_intensity < 0.2:
+                    if intensity > 50 and leakage1_intensity < 0.2:
                         interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
-                        lst_image_charge_interp = np.append(lst_image_charge_interp, interp_img, axis=0)
+                        lst_image_charge_interp.append(interp_img)
+                        acc_idxs += [i]
+
+            lst_image_charge_interp = np.array(lst_image_charge_interp)
 
             data_p.close()
 
@@ -164,14 +168,18 @@ def func(paths, ro, rc, rn):
                 'Event_Info/ei_LST_indices', data=np.array(ei_LST_indices))
 
             data_file.create_dataset(
-                'LST/LST_event_index', data=np.array(LST_event_index))
+                'LST/LST_event_index', data=np.array(LST_event_index)[acc_idxs])
             data_file.create_dataset(
-                'LST/LST_image_charge', data=np.array(LST_image_charge))
+                'LST/LST_image_charge', data=np.array(LST_image_charge)[acc_idxs])
             data_file.create_dataset(
-                'LST/LST_image_peak_times', data=np.array(LST_image_peak_times))
+                'LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
             data_file.create_dataset(
                 'LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
             data_file.close()
+
+            # in the interpolated files there will be all the original events
+            # but for the LST only the ones actually see at least from one LST (as in the original files)
+            # and that are above thresholds cuts
 
             if ro == '1':
                 remove(f)
