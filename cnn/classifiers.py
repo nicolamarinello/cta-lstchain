@@ -1,5 +1,5 @@
 from keras.models import Sequential
-from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization
+from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization, Activation
 from keras import layers
 from keras import models
 from keras import activations
@@ -70,22 +70,32 @@ class ClassifierV3:
 
     def get_model(self):
 
-        self.model.add(Conv2D(32, (3, 3), input_shape=(1, self.img_rows, self.img_cols), padding='same', data_format='channels_first', activation='relu'))
-        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(32, (3, 3), input_shape=(1, self.img_rows, self.img_cols), padding='same', data_format='channels_first'))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(Conv2D(64, (3, 3), padding='same', data_format='channels_first', activation='relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(64, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(Conv2D(128, (3, 3), padding='same', data_format='channels_first', activation='relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(128, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(Conv2D(256, (3, 3), padding='same', data_format='channels_first', activation='relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(Conv2D(256, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
         self.model.add(Flatten())
         self.model.add(Dense(128, activation='relu'))
+        self.model.add(BatchNormalization())
         self.model.add(Dropout(0.20))
         self.model.add(Dense(256, activation='relu'))
+        self.model.add(BatchNormalization())
         self.model.add(Dropout(0.20))
         self.model.add(Dense(1, activation='sigmoid'))
 

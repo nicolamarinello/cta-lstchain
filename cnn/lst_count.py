@@ -67,7 +67,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.', required=True)
     parser.add_argument(
-        '--interp', type=bool, default=0, help='Specify if count on interpolated files or not.', required=True)
+        '--interp', type=bool, default=False, help='Specify if count on interpolated files or not.', required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -78,6 +78,8 @@ if __name__ == '__main__':
     folders = FLAGS.dirs
     interp = FLAGS.interp
 
+    print('Interpolated', FLAGS.interp)
+
     print('Folders: ' + str(folders) + '\n')
 
     # create a single big list containing the paths of all the files
@@ -85,12 +87,13 @@ if __name__ == '__main__':
 
     if interp:
         ew = "_interp.h5"
+        print('Trying to find interpolated files...')
     else:
         ew = ".h5"
+        print('Trying to find not interpolated files...')
 
     for path in folders:
-        files = [join(path, f) for f in listdir(path) if (
-                isfile(join(path, f)) and f.endswith(ew))]
+        files = [join(path, f) for f in listdir(path) if (isfile(join(path, f)) and f.endswith(ew))]
         all_files = all_files + files
 
     # print('Files: ' + '\n' + str(all_files) + '\n')
