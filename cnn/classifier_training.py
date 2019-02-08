@@ -1,4 +1,4 @@
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet
 from os import mkdir
 from utils import get_all_files
 from keras import optimizers
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # print(class_weight)
 
     # mp.set_start_method('spawn', force=True)
-
+    
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
         model = class_v1.get_model()
@@ -86,12 +86,18 @@ if __name__ == "__main__":
     elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
-    elif model_name == 'ResNet':
+    elif model_name == 'CResNet':
         resnet = CResNet(img_rows, img_cols)
         model = resnet.get_model(cardinality=1)
+    elif model_name == 'ResNet20V1':
+        resnet = ResNet(img_rows, img_cols)
+        model = resnet.get_model(1, 3)
     else:
         print('Model name not valid')
         sys.exit(1)
+
+    print('Getting validation data...')
+    X_val, Y_val = validation_generator.get_all()
 
     # create a folder to keep model & results
     now = datetime.datetime.now()
@@ -127,7 +133,7 @@ if __name__ == "__main__":
     model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
     
     model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
+                        validation_data=(X_val, Y_val),
                         # validation_steps=len(validation_generator),
                         epochs=epochs,
                         verbose=1,
