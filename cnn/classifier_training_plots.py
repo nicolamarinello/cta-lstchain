@@ -40,13 +40,13 @@ if __name__ == "__main__":
 
     ax = axs[1]
     ax.plot(epochs, accuracy, label='Accuracy')
-    ax.plot(epochs, precision, label='Precision')
-    ax.plot(epochs, recall, label='Recall')
+    # ax.plot(epochs, precision, label='Precision')
+    # ax.plot(epochs, recall, label='Recall')
     ax.set_xlabel('Epoch')
-    ax.set_ylabel('APR')
-    ax.set_title('Training APR curves')
+    ax.set_ylabel('Accuracy')
+    ax.set_title('Training accuracy')
     ax.grid(True)
-    ax.legend(loc='upper left', fancybox=True, framealpha=0.)
+    # ax.legend(loc='upper left', fancybox=True, framealpha=0.)
 
     fig.suptitle('Training history')
 
@@ -65,13 +65,13 @@ if __name__ == "__main__":
 
     ax = axs2[1]
     ax.plot(epochs, val_accuracy, label='Accuracy')
-    ax.plot(epochs, val_precision, label='Precision')
-    ax.plot(epochs, val_recall, label='Recall')
+    # ax.plot(epochs, val_precision, label='Precision')
+    # ax.plot(epochs, val_recall, label='Recall')
     ax.set_xlabel('Epoch')
-    ax.set_ylabel('APR')
-    ax.set_title('Validation APR curves')
+    ax.set_ylabel('Accuracy')
+    ax.set_title('Validation accuracy')
     ax.grid(True)
-    ax.legend(loc='upper left', fancybox=True, framealpha=0.)
+    # ax.legend(loc='upper left', fancybox=True, framealpha=0.)
 
     fig2.suptitle('Validation history')
 
