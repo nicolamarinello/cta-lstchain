@@ -1,4 +1,5 @@
 import keras
+from keras import backend as K
 
 
 class LossHistoryC(keras.callbacks.Callback):
@@ -8,10 +9,11 @@ class LossHistoryC(keras.callbacks.Callback):
         self.val_losses = []
         self.accuracy = []
         self.val_accuracy = []
-        self.precision = []
-        self.val_precision = []
-        self.recall = []
-        self.val_recall = []
+        # self.precision = []
+        # self.val_precision = []
+        # self.recall = []
+        # self.val_recall = []
+        self.lrs = []
         self.dic = {}
 
     def on_train_begin(self, logs={}):
@@ -19,10 +21,10 @@ class LossHistoryC(keras.callbacks.Callback):
         self.val_losses = []
         self.accuracy = []
         self.val_accuracy = []
-        self.precision = []
-        self.val_precision = []
-        self.recall = []
-        self.val_recall = []
+        # self.precision = []
+        # self.val_precision = []
+        # self.recall = []
+        # self.val_recall = []
         self.dic = {}
 
     # def on_batch_end(self, batch, logs={}):
@@ -36,10 +38,11 @@ class LossHistoryC(keras.callbacks.Callback):
         self.val_losses.append(logs.get('val_loss'))
         self.accuracy.append(logs.get('acc'))
         self.val_accuracy.append(logs.get('val_acc'))
-        self.precision.append(logs.get('precision'))
-        self.val_precision.append(logs.get('val_precision'))
-        self.recall.append(logs.get('recall'))
-        self.val_recall.append(logs.get('val_recall'))
+        # self.precision.append(logs.get('precision'))
+        # self.val_precision.append(logs.get('val_precision'))
+        # self.recall.append(logs.get('recall'))
+        # self.val_recall.append(logs.get('val_recall'))
+        self.lrs.append(K.eval(self.model.optimizer.lr))
 
     def on_train_end(self, logs=None):
 
@@ -47,10 +50,11 @@ class LossHistoryC(keras.callbacks.Callback):
         self.dic['val_losses'] = self.val_losses
         self.dic['accuracy'] = self.accuracy
         self.dic['val_accuracy'] = self.val_accuracy
-        self.dic['precision'] = self.precision
-        self.dic['val_precision'] = self.val_precision
-        self.dic['recall'] = self.recall
-        self.dic['val_recall'] = self.val_recall
+        # self.dic['precision'] = self.precision
+        # self.dic['val_precision'] = self.val_precision
+        # self.dic['recall'] = self.recall
+        # self.dic['val_recall'] = self.val_recall
+        self.dic['lrs'] = self.lrs
 
 
 class LossHistoryR(keras.callbacks.Callback):

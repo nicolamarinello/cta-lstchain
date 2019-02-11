@@ -4,6 +4,7 @@ from utils import get_all_files
 from keras import optimizers
 from keras import callbacks
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from clr import OneCycleLR
 # from lr_scheduler import LearningRateScheduler
 from time import time
 from metrics import precision, recall
@@ -119,6 +120,12 @@ if __name__ == "__main__":
     # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
 
     csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.txt', separator=',', append=False)
+
+    # max_lr = 0.68
+
+    # lr_manager = OneCycleLR(len(training_generator)*batch_size, epochs, batch_size, max_lr,
+    #                        end_percentage=0.1,
+    #                        maximum_momentum=0.99, minimum_momentum=0.99)
 
     sgd = optimizers.SGD(lr=0.1,
                          # decay=1e-4,

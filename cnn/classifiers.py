@@ -359,7 +359,7 @@ class ResNet:
 
                 # Add classifier on top.
                 # v1 does not use BN after last shortcut connection-ReLU
-                x = AveragePooling2D(pool_size=8)(x)
+                x = AveragePooling2D(pool_size=8, data_format='channels_first')(x)
                 y = Flatten()(x)
                 outputs = Dense(1,
                                 activation='sigmoid',
