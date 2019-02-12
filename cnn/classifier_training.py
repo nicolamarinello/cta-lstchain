@@ -69,7 +69,7 @@ if __name__ == "__main__":
     print('Number of training protons: ' + str(train_protons))
 
     print('Building validation generator...')
-    validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=shuffle)
+    validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=False)
     print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
