@@ -7,18 +7,8 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        '--log', type=str, default='', help='Training history file.', required=True)
-    parser.add_argument(
-        '--transparent', type=bool, default=False, help='Specify whether plots have to be transparent.', required=False)
-
-    FLAGS, unparsed = parser.parse_known_args()
-
-    filen = FLAGS.log
-    tran = FLAGS.transparent
+def train_plots(filen, tran):
     folder = os.path.dirname(filen)
 
     # read data from training history file
@@ -114,3 +104,19 @@ if __name__ == "__main__":
     fig3.savefig(folder + '/lr.png', transparent=tran)
 
     # plt.show()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--log', type=str, default='', help='Training history file.', required=True)
+    parser.add_argument(
+        '--transparent', type=bool, default=False, help='Specify whether plots have to be transparent.', required=False)
+
+    FLAGS, unparsed = parser.parse_known_args()
+
+    filen = FLAGS.log
+    tran = FLAGS.transparent
+
+    train_plots(filen, tran)

@@ -11,10 +11,15 @@ from keras import callbacks
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+from classifier_tester import tester
+from classifier_training_plots import train_plots
+from classifier_test_plots import test_plots
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
+from os import listdir
+from os.path import isfile, join
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -39,6 +44,8 @@ if __name__ == "__main__":
         '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
     parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
+    parser.add_argument(
+        '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
 
@@ -185,7 +192,8 @@ if __name__ == "__main__":
     model.summary()
 
     checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{acc:.5f}_{val_acc:.5f}.h5')
+        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{acc:.5f}_{val_acc:.5f}.h5', monitor='val_acc',
+        save_best_only=True)
 
     tensorboard = keras.callbacks.TensorBoard(log_dir=root_dir + "/logs",
                                               histogram_freq=5,
@@ -209,8 +217,9 @@ if __name__ == "__main__":
 
     # reduce lr on plateau
     if lropf:
-        lrop = keras.callbacks.ReduceLROnPlateau(monitor='val_acc', factor=f_lrop, patience=p_lrop, verbose=1, mode='auto',
-                                           min_delta=md_lrop, cooldown=cd_lrop, min_lr=mlr_lrop)
+        lrop = keras.callbacks.ReduceLROnPlateau(monitor='val_acc', factor=f_lrop, patience=p_lrop, verbose=1,
+                                                 mode='auto',
+                                                 min_delta=md_lrop, cooldown=cd_lrop, min_lr=mlr_lrop)
         callbacks.append(lrop)
 
     # early stopping
@@ -236,5 +245,23 @@ if __name__ == "__main__":
                         callbacks=callbacks)
 
     # save results
-    with open(root_dir + '/train-history', 'wb') as file_pi:
+    train_history = root_dir + '/train-history'
+    with open(train_history, 'wb') as file_pi:
         pickle.dump(history.dic, file_pi)
+
+    # post training operations
+
+    # training plots
+    train_plots(train_history, False)
+
+    model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if (isfile(join(root_dir, f)) and f.startswith(model_name))]
+
+    best = model_checkpoints[-1]    # the best model is the checkpoint with the highest epoch number
+
+    print('Best checkpoint: ', best)
+
+    # test plots & results
+    test_dirs = FLAGS.test_dirs
+    if len(test_dirs) > 0:
+        csv = tester(test_dirs, best, batch_size, workers)
+        test_plots(csv)
