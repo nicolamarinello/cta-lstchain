@@ -175,7 +175,7 @@ if __name__ == "__main__":
         resnet = ResNetA(img_rows, img_cols)
         model = resnet.get_model()
     elif model_name == 'ResNetB':
-        resnet = ResNetB(img_rows, img_cols)
+        resnet = ResNetB(img_rows, img_cols, 1e-4)
         model = resnet.get_model()
     else:
         print('Model name not valid')
@@ -260,7 +260,7 @@ if __name__ == "__main__":
 
     print('Best checkpoint: ', best)
 
-    # test plots & results
+    # test plots & results if test data is provided
     test_dirs = FLAGS.test_dirs
     if len(test_dirs) > 0:
         csv = tester(test_dirs, best, batch_size, workers)

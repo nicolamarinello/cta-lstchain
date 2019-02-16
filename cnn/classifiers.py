@@ -472,12 +472,15 @@ class ResNetA:
 
 class ResNetB:
 
-    def __init__(self, img_rows, img_cols):
+    def __init__(self, img_rows, img_cols, wd):
 
         self.img_rows = img_rows
         self.img_cols = img_cols
+        self.wd = wd
 
     def get_model(self):
+
+        wd = self.wd
 
         def resnet_layer(inputs,
                          num_filters=16,
@@ -504,7 +507,7 @@ class ResNetB:
                           strides=strides,
                           padding='same',
                           kernel_initializer='he_normal',
-                          kernel_regularizer=l2(1e-4),
+                          kernel_regularizer=l2(wd),
                           data_format="channels_first")
 
             x = inputs
