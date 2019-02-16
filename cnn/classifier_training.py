@@ -1,4 +1,4 @@
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB
 from os import mkdir
 from utils import get_all_files
 from keras import optimizers
@@ -93,6 +93,12 @@ if __name__ == "__main__":
     elif model_name == 'ResNet20V1':
         resnet = ResNet(img_rows, img_cols)
         model = resnet.get_model(1, 3)
+    elif model_name == 'ResNetA':
+        resnet = ResNetA(img_rows, img_cols)
+        model = resnet.get_model()
+    elif model_name == 'ResNetB':
+        resnet = ResNetB(img_rows, img_cols)
+        model = resnet.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -115,7 +121,7 @@ if __name__ == "__main__":
     history = LossHistoryC()
 
     # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.001, patience=PATIENCE, verbose=1, mode='max')
+    early_stopping = EarlyStopping(monitor='val_acc', min_delta=0.01, patience=PATIENCE, verbose=1, mode='max')
 
     # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',auc_roc,f1])
 
@@ -127,13 +133,13 @@ if __name__ == "__main__":
     #                        end_percentage=0.1,
     #                        maximum_momentum=0.99, minimum_momentum=0.99)
 
-    sgd = optimizers.SGD(lr=0.1,
-                         # decay=1e-4,
+    sgd = optimizers.SGD(lr=0.01,
+                         decay=1e-4,
                          momentum=0.9,
                          nesterov=True)
 
-    lrop = callbacks.ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=10, verbose=1, mode='auto',
-                                       min_delta=0.0001, cooldown=5, min_lr=0.0001)
+    lrop = callbacks.ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=15, verbose=1, mode='auto',
+                                       min_delta=0.001, cooldown=5, min_lr=0.0001)
 
     callbacks = [history, checkpoint, early_stopping, lrop, csv_callback]
     

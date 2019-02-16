@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     filen = FLAGS.log
     tran = FLAGS.transparent
-    folder = dirname1 = os.path.basename(filen)
+    folder = os.path.dirname(filen)
 
     # read data from training history file
     with open(filen, 'rb') as f:
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     fig.suptitle('Training history')
 
-    fig.savefig(folder + 'classifier_training.png', transparent=tran)
+    fig.savefig(folder + '/classifier_training.png', transparent=tran)
 
     # validation loss & accuracy
     fig2, axs2 = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     fig2.suptitle('Validation history')
 
-    fig2.savefig(folder + 'classifier_validation.png', transparent=tran)
+    fig2.savefig(folder + '/classifier_validation.png', transparent=tran)
 
     # training + validation lxoss & accuracy
     fig3, axs3 = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     fig3.suptitle('Training history')
 
-    fig3.savefig(folder + 'classifier_train_val.png', transparent=tran)
+    fig3.savefig(folder + '/classifier_train_val.png', transparent=tran)
 
     # lr
     fig3, axs3 = plt.subplots(nrows=1, ncols=1, figsize=(6.5, 5))
@@ -111,6 +111,6 @@ if __name__ == "__main__":
 
     # fig3.suptitle('Training history')
 
-    fig3.savefig(folder + 'lr.png', transparent=tran)
+    fig3.savefig(folder + '/lr.png', transparent=tran)
 
     # plt.show()
