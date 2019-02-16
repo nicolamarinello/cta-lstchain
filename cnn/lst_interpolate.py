@@ -1,18 +1,18 @@
+import argparse
+import multiprocessing as mp
 from multiprocessing import Process
 from os import listdir, remove
 from os.path import isfile, join
-from ctapipe.instrument import CameraGeometry
+
+import h5py
+import numpy as np
+import tables
 from astropy import units as u
-from scipy.interpolate import griddata
 from ctapipe.image import hillas_parameters, leakage
 from ctapipe.image.cleaning import tailcuts_clean
+from ctapipe.instrument import CameraGeometry
+from scipy.interpolate import griddata
 from tables.exceptions import HDF5ExtError, NoSuchNodeError
-import multiprocessing as mp
-import argparse
-import numpy as np
-import h5py
-import sys
-import tables
 
 '''
 usage: python lst_interpolate.py --dirs path/to/folder1 path/to/folder2 path/to/folder3 ... --rem_org 0 --rem_corr 0 --rem_nsnerr 0
@@ -20,7 +20,6 @@ usage: python lst_interpolate.py --dirs path/to/folder1 path/to/folder2 path/to/
 
 
 def get_array_data(data):
-
     data_ainfo = data.root.Array_Info
 
     # array info data
@@ -36,7 +35,6 @@ def get_array_data(data):
 
 
 def get_event_data(data):
-
     data_einfo = data.root.Event_Info
 
     # event info data
@@ -55,7 +53,6 @@ def get_event_data(data):
 
 
 def get_LST_data(data):
-
     data_LST = data.root.LST
 
     # LST data
@@ -67,7 +64,6 @@ def get_LST_data(data):
 
 
 def func(paths, ro, rc, rn):
-
     img_rows, img_cols = 100, 100
 
     # iterate on each proton file & concatenate charge arrays
@@ -97,7 +93,7 @@ def func(paths, ro, rc, rn):
             #    (len(LST_image_charge), img_rows, img_cols))
 
             lst_image_charge_interp = []
-            acc_idxs = []           # accepted indexes
+            acc_idxs = []  # accepted indexes
 
             cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
 
@@ -203,7 +199,6 @@ def func(paths, ro, rc, rn):
 
 
 def chunkit(seq, num):
-
     avg = len(seq) / float(num)
     out = []
     last = 0.0
@@ -246,7 +241,7 @@ if __name__ == '__main__':
 
     for path in folders:
         files = [join(path, f) for f in listdir(path) if (
-            isfile(join(path, f)) and f.endswith(".h5"))]
+                isfile(join(path, f)) and f.endswith(".h5"))]
         all_files = all_files + files
 
     # print('Files: ' + '\n' + str(all_files) + '\n')
