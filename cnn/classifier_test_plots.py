@@ -3,7 +3,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
+from prettytable import PrettyTable
 
 import argparse
 import math
@@ -12,7 +13,6 @@ import os
 
 
 def test_plots(csv):
-
     folder = os.path.dirname(csv)
 
     df = pd.read_csv(csv)
@@ -23,8 +23,6 @@ def test_plots(csv):
     p_c = np.zeros(r.shape[0])
     g_c = np.zeros(r.shape[0])
     significance = np.zeros(r.shape[0])
-    tpr = np.zeros(r.shape[0])  # true positive rate
-    fpr = np.zeros(r.shape[0])  # false positive rate
     n_test_protons = (df['GroundTruth'] == 0).sum()
     n_test_gammas = (df['GroundTruth'] == 1).sum()
     print('Number of protons in the test set: ', n_test_protons)
@@ -33,21 +31,27 @@ def test_plots(csv):
     for i, thr in enumerate(r):
         fp[i] = df[(df['GroundTruth'] == 0) & (df['Predicted'] >= thr)].count()[0]
         fn[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] <= thr)].count()[0]
-        tpr[i] = (n_test_gammas - fn[i]) / n_test_gammas
-        fpr[i] = fp[i] / n_test
-        # print('Proton count: ', fp[i], ' Gamma count: ', fn[i])
+
+    x = PrettyTable()
+
+    x.field_names = ['Threshold', 'Accepted gammas', 'Accepted protons']
 
     for i, thr in enumerate(r):
         p_c[i] = df[(df['GroundTruth'] == 0) & (df['Predicted'] >= thr)].count()[0]
         g_c[i] = df[(df['GroundTruth'] == 1) & (df['Predicted'] >= thr)].count()[0]
         significance[i] = (g_c[i] / n_test_gammas) / math.sqrt(p_c[i] / n_test_protons)
-        print('Threshold: ', thr, ' Accepted protons: ', p_c[i] / n_test_protons, ' Accepted gammas: ',
-              g_c[i] / n_test_gammas)
+        x.add_row([round(thr, 2), round(g_c[i] / n_test_gammas, 2), round(p_c[i] / n_test_protons, 2)])
 
     y_gt = df['GroundTruth']
     y_pr = df['Predicted']
 
     ar = roc_auc_score(y_gt, y_pr)
+    fpr, tpr, thresholds = roc_curve(y_gt, y_pr)
+
+    print(x)
+
+    with open(folder + '/test_table.txt', 'w') as f:
+        print(x, file=f)
 
     print('AUC_ROC: ', ar)
     print('Accuracy: ', accuracy_score(df['GroundTruth'], df['Predicted'].round(), normalize=True))
@@ -84,6 +88,7 @@ def test_plots(csv):
 
     ax = axs2
 
+    ax.set_title('Significance')
     ax.scatter(r, significance, s=3)
     ax.set_xlabel(r'$\zeta$')
     ax.set_ylabel('eg/Sqrt(ep)')
