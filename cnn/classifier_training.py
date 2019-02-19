@@ -3,7 +3,9 @@ import datetime
 import pickle
 import random
 import sys
+from os import listdir
 from os import mkdir
+from os.path import isfile, join
 
 import keras
 import numpy as np
@@ -11,15 +13,13 @@ from keras import callbacks
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
-from classifier_test_plots import test_plots
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB, ResNetC
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
-from os import listdir
-from os.path import isfile, join
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -81,10 +81,10 @@ if __name__ == "__main__":
     mlr_lrop = lr / 100  # min lr
 
     # clr
-    max_lr = 0.68
+    max_lr = 0.032
     e_per = 0.1
-    maximum_momentum = 0.99
-    minimum_momentum = 0.99
+    maximum_momentum = 0.95
+    minimum_momentum = 0.90
 
     h5files = get_all_files(folders)
     random.shuffle(h5files)
@@ -171,11 +171,21 @@ if __name__ == "__main__":
     elif model_name == 'ResNet20V1':
         resnet = ResNet(img_rows, img_cols)
         model = resnet.get_model(1, 3)
+    elif model_name == 'ResNet32V1':
+        resnet = ResNet(img_rows, img_cols)
+        model = resnet.get_model(1, 5)
     elif model_name == 'ResNetA':
         resnet = ResNetA(img_rows, img_cols)
         model = resnet.get_model()
     elif model_name == 'ResNetB':
-        resnet = ResNetB(img_rows, img_cols, 1e-4)
+        wd = 3e-6
+        print('Weight decay: ', wd)
+        resnet = ResNetB(img_rows, img_cols, wd)
+        model = resnet.get_model()
+    elif model_name == 'ResNetC':
+        wd = 0
+        print('Weight decay: ', wd)
+        resnet = ResNetC(img_rows, img_cols, wd)
         model = resnet.get_model()
     else:
         print('Model name not valid')
@@ -203,7 +213,7 @@ if __name__ == "__main__":
 
     history = LossHistoryC()
 
-    csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.txt', separator=',', append=False)
+    csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.csv', separator=',', append=False)
 
     callbacks = [history, checkpoint, csv_callback, tensorboard]
 
@@ -254,9 +264,14 @@ if __name__ == "__main__":
     # training plots
     train_plots(train_history, False)
 
-    model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if (isfile(join(root_dir, f)) and f.startswith(model_name))]
+    # get the best model on validation
+    val_acc = history.dic['val_accuracy']
+    m = val_acc.index(max(val_acc))                 # get the index with the highest accuracy
 
-    best = model_checkpoints[-1]    # the best model is the checkpoint with the highest epoch number
+    model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
+                         (isfile(join(root_dir, f)) and f.startswith(model_name + '_' + '{:02d}'.format(m+1)))]
+
+    best = model_checkpoints[0]
 
     print('Best checkpoint: ', best)
 
