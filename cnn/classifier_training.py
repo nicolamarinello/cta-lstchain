@@ -16,7 +16,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB, ResNetC
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
@@ -66,17 +66,20 @@ if __name__ == "__main__":
 
     # early stopping
     md_es = 0.01  # min delta
-    p_es = 25  # patience
+    p_es = 20  # patience
 
     # sgd
-    lr = 0.01  # lr
+    lr = 0.001  # lr
     decay = 1e-4  # decay
     momentum = 0.9  # momentum
 
+    # adam
+    amsgrad = True
+
     # reduce lr on plateau
     f_lrop = 0.1  # factor
-    p_lrop = 15  # patience
-    md_lrop = 0.001  # min delta
+    p_lrop = 20  # patience
+    md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
     mlr_lrop = lr / 100  # min lr
 
@@ -187,6 +190,16 @@ if __name__ == "__main__":
         print('Weight decay: ', wd)
         resnet = ResNetC(img_rows, img_cols, wd)
         model = resnet.get_model()
+    elif model_name == 'ResNetD':
+        wd = 0
+        print('Weight decay: ', wd)
+        resnet = ResNetD(img_rows, img_cols, wd)
+        model = resnet.get_model()
+    elif model_name == 'ResNetE':
+        wd = 1e-4
+        print('Weight decay: ', wd)
+        resnet = ResNetE(img_rows, img_cols, wd)
+        model = resnet.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -215,7 +228,9 @@ if __name__ == "__main__":
 
     csv_callback = callbacks.CSVLogger(root_dir + '/epochs_log.csv', separator=',', append=False)
 
-    callbacks = [history, checkpoint, csv_callback, tensorboard]
+    callbacks = [history, checkpoint, csv_callback]
+
+    # callbacks.append(tensorboard)
 
     # sgd
     optimizer = None
@@ -223,7 +238,8 @@ if __name__ == "__main__":
         sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
         optimizer = sgd
     elif opt == 'adam':
-        optimizer = 'adam'
+        adam = optimizers.Adam(amsgrad=amsgrad)
+        optimizer = adam
 
     # reduce lr on plateau
     if lropf:

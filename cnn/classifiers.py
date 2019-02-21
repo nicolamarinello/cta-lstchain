@@ -607,6 +607,46 @@ class ResNetC:
                 x = conv(x)
             return x
 
+        """
+        
+        batch_size 128
+        adam
+        
+        Total params: 23,161
+        Trainable params: 22,261
+        Non-trainable params: 900
+        __________________________________________________________________________________________________
+        Epoch 1/75
+        6564/6564 [==============================] - 1514s 231ms/step - loss: 0.5753 - acc: 0.6771 - val_loss: 0.5251 - val_acc: 0.7201
+        Epoch 2/75
+        6564/6564 [==============================] - 1487s 226ms/step - loss: 0.5078 - acc: 0.7370 - val_loss: 0.5305 - val_acc: 0.7180
+        Epoch 3/75
+        6564/6564 [==============================] - 1494s 228ms/step - loss: 0.4926 - acc: 0.7469 - val_loss: 0.5266 - val_acc: 0.7200
+        Epoch 4/75
+        6564/6564 [==============================] - 1407s 214ms/step - loss: 0.4843 - acc: 0.7525 - val_loss: 0.5110 - val_acc: 0.7357
+        Epoch 5/75
+        6564/6564 [==============================] - 1475s 225ms/step - loss: 0.4782 - acc: 0.7558 - val_loss: 0.5173 - val_acc: 0.7213
+        Epoch 6/75
+        6564/6564 [==============================] - 1503s 229ms/step - loss: 0.4739 - acc: 0.7585 - val_loss: 0.4838 - val_acc: 0.7515
+        Epoch 7/75
+        6564/6564 [==============================] - 1484s 226ms/step - loss: 0.4702 - acc: 0.7609 - val_loss: 0.5082 - val_acc: 0.7339
+        Epoch 8/75
+        6564/6564 [==============================] - 1484s 226ms/step - loss: 0.4672 - acc: 0.7624 - val_loss: 0.4913 - val_acc: 0.7451
+        Epoch 9/75
+        6564/6564 [==============================] - 1493s 227ms/step - loss: 0.4647 - acc: 0.7643 - val_loss: 0.5306 - val_acc: 0.7184
+        Epoch 10/75
+        6564/6564 [==============================] - 1496s 228ms/step - loss: 0.4628 - acc: 0.7653 - val_loss: 0.4680 - val_acc: 0.7612
+        Epoch 11/75
+        6564/6564 [==============================] - 1496s 228ms/step - loss: 0.4614 - acc: 0.7653 - val_loss: 0.4946 - val_acc: 0.7380
+        Epoch 12/75
+        6564/6564 [==============================] - 1501s 229ms/step - loss: 0.4597 - acc: 0.7668 - val_loss: 0.4843 - val_acc: 0.7482
+        Epoch 13/75
+        6564/6564 [==============================] - 1500s 229ms/step - loss: 0.4580 - acc: 0.7674 - val_loss: 0.5041 - val_acc: 0.7302
+        Epoch 14/75
+        4774/6564 [====================>.........] - ETA: 6:21 - loss: 0.4570 - acc: 0.7684
+        
+        """
+
         input_shape = (1, self.img_rows, self.img_cols)
 
         inputs = Input(shape=input_shape)  # output (1, 100, 100)
@@ -637,6 +677,304 @@ class ResNetC:
         x = AveragePooling2D(pool_size=3, data_format='channels_first')(x)
         y = Flatten()(x)
         outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
+        model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
+
+class ResNetD:
+
+    def __init__(self, img_rows, img_cols, wd):
+
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.wd = wd
+
+    def get_model(self):
+
+        wd = self.wd
+
+        def resnet_layer(inputs,
+                         num_filters=16,
+                         kernel_size=3,
+                         strides=1,
+                         activation='relu',
+                         batch_normalization=True,
+                         conv_first=True):
+            """2D Convolution-Batch Normalization-Activation stack builder
+            # Arguments
+                inputs (tensor): input tensor from input image or previous layer
+                num_filters (int): Conv2D number of filters
+                kernel_size (int): Conv2D square kernel dimensions
+                strides (int): Conv2D square stride dimensions
+                activation (string): activation name
+                batch_normalization (bool): whether to include batch normalization
+                conv_first (bool): conv-bn-activation (True) or
+                    bn-activation-conv (False)
+            # Returns
+                x (tensor): tensor as input to the next layer
+            """
+            conv = Conv2D(num_filters,
+                          kernel_size=kernel_size,
+                          strides=strides,
+                          padding='same',
+                          kernel_initializer='he_normal',
+                          kernel_regularizer=l2(wd),
+                          data_format="channels_first")
+
+            x = inputs
+            if conv_first:
+                x = conv(x)
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+            else:
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+                x = conv(x)
+            return x
+
+        """
+        batch size 128
+        adam
+        overfits
+        
+        Total params: 181,057
+        Trainable params: 179,457
+        Non-trainable params: 1,600
+        __________________________________________________________________________________________________
+        Epoch 1/75
+        6607/6607 [==============================] - 1571s 238ms/step - loss: 0.5509 - acc: 0.6958 - val_loss: 0.5315 - val_acc: 0.7138
+        Epoch 2/75
+        6607/6607 [==============================] - 1559s 236ms/step - loss: 0.4804 - acc: 0.7533 - val_loss: 0.5282 - val_acc: 0.7161
+        Epoch 3/75
+        6607/6607 [==============================] - 1598s 242ms/step - loss: 0.4653 - acc: 0.7621 - val_loss: 0.4703 - val_acc: 0.7608
+        Epoch 4/75
+        6607/6607 [==============================] - 1584s 240ms/step - loss: 0.4554 - acc: 0.7675 - val_loss: 0.4998 - val_acc: 0.7352
+        Epoch 5/75
+        6607/6607 [==============================] - 1587s 240ms/step - loss: 0.4482 - acc: 0.7720 - val_loss: 0.4786 - val_acc: 0.7558
+        Epoch 6/75
+        6607/6607 [==============================] - 1572s 238ms/step - loss: 0.4433 - acc: 0.7754 - val_loss: 0.4537 - val_acc: 0.7678
+        Epoch 7/75
+        6607/6607 [==============================] - 1628s 246ms/step - loss: 0.4384 - acc: 0.7776 - val_loss: 0.4533 - val_acc: 0.7710
+        Epoch 8/75
+        6607/6607 [==============================] - 1629s 247ms/step - loss: 0.4347 - acc: 0.7796 - val_loss: 0.4749 - val_acc: 0.7549
+        Epoch 9/75
+        6607/6607 [==============================] - 1593s 241ms/step - loss: 0.4308 - acc: 0.7820 - val_loss: 0.4525 - val_acc: 0.7712
+        Epoch 10/75
+        6607/6607 [==============================] - 1579s 239ms/step - loss: 0.4274 - acc: 0.7838 - val_loss: 0.4478 - val_acc: 0.7739
+        Epoch 11/75
+        6607/6607 [==============================] - 1564s 237ms/step - loss: 0.4242 - acc: 0.7856 - val_loss: 0.4614 - val_acc: 0.7653
+        Epoch 12/75
+        6607/6607 [==============================] - 1578s 239ms/step - loss: 0.4208 - acc: 0.7871 - val_loss: 0.4569 - val_acc: 0.7670
+        Epoch 13/75
+        6607/6607 [==============================] - 1569s 237ms/step - loss: 0.4176 - acc: 0.7890 - val_loss: 0.4648 - val_acc: 0.7623
+        Epoch 14/75
+        6607/6607 [==============================] - 1583s 240ms/step - loss: 0.4142 - acc: 0.7911 - val_loss: 0.4524 - val_acc: 0.7685
+        Epoch 15/75
+        6607/6607 [==============================] - 1599s 242ms/step - loss: 0.4109 - acc: 0.7926 - val_loss: 0.4541 - val_acc: 0.7684
+        Epoch 16/75
+        6607/6607 [==============================] - 1594s 241ms/step - loss: 0.4077 - acc: 0.7940 - val_loss: 0.4498 - val_acc: 0.7719
+        Epoch 17/75
+        6607/6607 [==============================] - 1581s 239ms/step - loss: 0.4043 - acc: 0.7961 - val_loss: 0.4516 - val_acc: 0.7714
+        Epoch 18/75
+        6607/6607 [==============================] - 1613s 244ms/step - loss: 0.4013 - acc: 0.7980 - val_loss: 0.4518 - val_acc: 0.7707
+        Epoch 19/75
+        6607/6607 [==============================] - 1591s 241ms/step - loss: 0.3982 - acc: 0.7996 - val_loss: 0.4596 - val_acc: 0.7669
+        Epoch 20/75
+        6607/6607 [==============================] - 1557s 236ms/step - loss: 0.3947 - acc: 0.8016 - val_loss: 0.4650 - val_acc: 0.7637
+        Epoch 21/75
+        6607/6607 [==============================] - 1579s 239ms/step - loss: 0.3914 - acc: 0.8032 - val_loss: 0.4634 - val_acc: 0.7651
+        Epoch 22/75
+        6607/6607 [==============================] - 1593s 241ms/step - loss: 0.3881 - acc: 0.8051 - val_loss: 0.4672 - val_acc: 0.7634
+        Epoch 23/75
+        6607/6607 [==============================] - 1596s 242ms/step - loss: 0.3847 - acc: 0.8071 - val_loss: 0.4686 - val_acc: 0.7628
+        Epoch 24/75
+        6607/6607 [==============================] - 1573s 238ms/step - loss: 0.3820 - acc: 0.8085 - val_loss: 0.4717 - val_acc: 0.7628
+        Epoch 25/75
+        6607/6607 [==============================] - 1575s 238ms/step - loss: 0.3788 - acc: 0.8104 - val_loss: 0.4795 - val_acc: 0.7545
+        Epoch 26/75
+        6607/6607 [==============================] - 1581s 239ms/step - loss: 0.3754 - acc: 0.8122 - val_loss: 0.4718 - val_acc: 0.7619
+        Epoch 27/75
+        2085/6607 [========>.....................] - ETA: 15:18 - loss: 0.3672 - acc: 0.8173
+        
+        
+
+        """
+
+        input_shape = (1, self.img_rows, self.img_cols)
+
+        inputs = Input(shape=input_shape)  # output (1, 100, 100)
+        y = resnet_layer(inputs=inputs, num_filters=16, strides=1)  # output (16, 100, 100)
+
+        # stack 0
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 1
+        x = resnet_layer(inputs=y, num_filters=32, strides=2)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=32, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=64, strides=2)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=64, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        x = Activation('relu')(x)
+
+        x = AveragePooling2D(pool_size=3, data_format='channels_first')(x)
+        y = Flatten()(x)
+        outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
+        model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
+
+class ResNetE:
+
+    def __init__(self, img_rows, img_cols, wd):
+
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.wd = wd
+
+    def get_model(self):
+
+        wd = self.wd
+
+        def resnet_layer(inputs,
+                         num_filters=16,
+                         kernel_size=3,
+                         strides=1,
+                         activation='relu',
+                         batch_normalization=True,
+                         conv_first=True):
+            """2D Convolution-Batch Normalization-Activation stack builder
+            # Arguments
+                inputs (tensor): input tensor from input image or previous layer
+                num_filters (int): Conv2D number of filters
+                kernel_size (int): Conv2D square kernel dimensions
+                strides (int): Conv2D square stride dimensions
+                activation (string): activation name
+                batch_normalization (bool): whether to include batch normalization
+                conv_first (bool): conv-bn-activation (True) or
+                    bn-activation-conv (False)
+            # Returns
+                x (tensor): tensor as input to the next layer
+            """
+            conv = Conv2D(num_filters,
+                          kernel_size=kernel_size,
+                          strides=strides,
+                          padding='same',
+                          kernel_initializer='he_normal',
+                          kernel_regularizer=l2(wd),
+                          data_format="channels_first")
+
+            x = inputs
+            if conv_first:
+                x = conv(x)
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+            else:
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+                x = conv(x)
+            return x
+
+        """
+        Total params: 179,441
+        Trainable params: 177,737
+        Non-trainable params: 1,704
+        """
+
+        input_shape = (1, self.img_rows, self.img_cols)
+
+        inputs = Input(shape=input_shape)  # output (1, 100, 100)
+        y = resnet_layer(inputs=inputs, num_filters=8, strides=1)  # output (16, 100, 100)
+
+        # stack 0
+        x = resnet_layer(inputs=y, num_filters=8, strides=1)
+        x = resnet_layer(inputs=x, num_filters=8, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=8, strides=1)
+        x = resnet_layer(inputs=x, num_filters=8, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 1
+        x = resnet_layer(inputs=y, num_filters=16, strides=2)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=16, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=32, strides=2)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=32, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 3
+        x = resnet_layer(inputs=y, num_filters=64, strides=2)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=64, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = AveragePooling2D(pool_size=3, data_format='channels_first')(y)
+        y = Flatten()(x)
+        outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
+        # outputs = Dense(1, activation='sigmoid')(y)
         model = Model(inputs=inputs, outputs=outputs)
 
         return model
