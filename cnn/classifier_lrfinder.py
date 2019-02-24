@@ -3,7 +3,10 @@ import datetime
 import random
 from os import mkdir
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 import numpy as np
 from keras import backend as K
 from keras import optimizers
@@ -48,11 +51,11 @@ if __name__ == "__main__":
     validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=False)
 
     print('Getting validation data...')
-    X_val, Y_val = validation_generator.get_all()
+    X_val, Y_val = validation_generator.get_val()
 
     if phase == 'lr':
         # lr finder
-        model_name = 'ResNetB'
+        model_name = 'ResNetE'
         resnet = ResNetB(100, 100, 0)
         model = resnet.get_model()  # set weight decay
 
@@ -66,7 +69,7 @@ if __name__ == "__main__":
         lrf = LRFinder(num_samples=len(training_generator) * batch_size - 1,
                        batch_size=batch_size,
                        minimum_lr=1e-4,
-                       maximum_lr=15,
+                       maximum_lr=2,
                        validation_data=(X_val, Y_val),
                        lr_scale='exp',
                        save_dir=root_dir + '/weights/')
