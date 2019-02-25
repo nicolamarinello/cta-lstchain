@@ -8,17 +8,20 @@ import os
 
 class DataGeneratorC(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, h5files, batch_size=32, val_per=0.2, shuffle=True):
+    def __init__(self, h5files, batch_size=32, arrival_time=False, val_per=0.2, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
         self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
         self.shuffle = shuffle
         self.generate_indexes()
+        self.arrival_time = arrival_time
         self.on_epoch_end()
-        # split into training and validation
-        self.indexes, self.val_indexes = np.split(self.indexes, [int(self.indexes.shape[0]*(1-val_per))])
-        # sort val_indexes by file index to read images faster from disk
-        self.val_indexes = np.sort(self.val_indexes.view('i8,i8,i8'), order=['f1'], axis=0).view(np.int)
+        self.val_indexes = np.array([])
+        if val_per > 0:
+            # split into training and validation
+            self.indexes, self.val_indexes = np.split(self.indexes, [int(self.indexes.shape[0]*(1-val_per))])
+            # sort val_indexes by file index to read images faster from disk
+            self.val_indexes = np.sort(self.val_indexes.view('i8,i8,i8'), order=['f1'], axis=0).view(np.int)
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -136,7 +139,7 @@ class DataGeneratorC(keras.utils.Sequence):
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, 100, 100])
+        x = np.empty([self.batch_size, self.arrival_time+1, 100, 100])
         y = np.empty([self.batch_size], dtype=int)
 
         # print('__data_generation', indexes)
@@ -150,7 +153,9 @@ class DataGeneratorC(keras.utils.Sequence):
 
             h5f = h5py.File(filename, 'r')
             # Store image
-            x[i, ] = h5f['LST/LST_image_charge_interp'][row[1]]
+            x[i, 0] = h5f['LST/LST_image_charge_interp'][row[1]]
+            if self.arrival_time:
+                x[i, 0] = h5f['LST/LST_image_peak_times_interp'][row[1]]
             h5f.close()
             # Store class
             y[i] = row[2]

@@ -15,7 +15,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, CResNet, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, ResNetF, ResNetG
+from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, ResNetF, ResNetG, ResNetH, ResNetXt
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
@@ -29,6 +29,8 @@ if __name__ == "__main__":
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
+    parser.add_argument(
+        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=True)
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
@@ -53,6 +55,7 @@ if __name__ == "__main__":
     # cmd line parameters
     folders = FLAGS.dirs
     model_name = FLAGS.model
+    time = FLAGS.time
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
     opt = FLAGS.opt
@@ -65,14 +68,17 @@ if __name__ == "__main__":
     # hard coded parameters
     shuffle = True
     img_rows, img_cols = 100, 100
+    channels = 1
+    if time:
+        channels = 2
 
     # early stopping
     md_es = 0.01  # min delta
-    p_es = 20  # patience
+    p_es = 25  # patience
 
     # sgd
-    lr = 0.001  # lr
-    decay = 1e-4  # decay
+    lr = 0.01  # lr
+    decay = 0  # decay
     momentum = 0.9  # momentum
 
     # adam
@@ -80,7 +86,7 @@ if __name__ == "__main__":
 
     # reduce lr on plateau
     f_lrop = 0.1  # factor
-    p_lrop = 20  # patience
+    p_lrop = 25  # patience
     md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
     mlr_lrop = lr / 100  # min lr
@@ -99,7 +105,7 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorC(h5files, batch_size=batch_size, shuffle=shuffle)
+    training_generator = DataGeneratorC(h5files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
 
     train_idxs, val_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -113,6 +119,7 @@ if __name__ == "__main__":
     print('Image rows: ', img_rows, ' Image cols: ', img_cols)
     print('Folders:', folders)
     print('Model: ', model_name)
+    print('Use arrival time: ', time)
     print('Epochs:', epochs)
     print('Batch size: ', batch_size)
     print('Optimizer: ', opt)
@@ -163,9 +170,11 @@ if __name__ == "__main__":
     elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
-    elif model_name == 'CResNet':
-        resnet = CResNet(img_rows, img_cols)
-        model = resnet.get_model(cardinality=1)
+    elif model_name == 'ResNetXt':
+        cardinality = 32
+        print('Cardinality', cardinality)
+        resnet = ResNetXt(img_rows, img_cols)
+        model = resnet.get_model(cardinality=cardinality)
     elif model_name == 'ResNet20V1':
         resnet = ResNet(img_rows, img_cols)
         model = resnet.get_model(1, 3)
@@ -196,14 +205,19 @@ if __name__ == "__main__":
         resnet = ResNetE(img_rows, img_cols, wd)
         model = resnet.get_model()
     elif model_name == 'ResNetF':
-        wd = 0
+        wd = 1e-4
         print('Weight decay: ', wd)
-        resnet = ResNetF(img_rows, img_cols, wd)
+        resnet = ResNetF(channels, img_rows, img_cols, wd)
         model = resnet.get_model()
     elif model_name == 'ResNetG':
         wd = 0
         print('Weight decay: ', wd)
         resnet = ResNetG(img_rows, img_cols, wd)
+        model = resnet.get_model()
+    elif model_name == 'ResNetH':
+        wd = 1e-3
+        print('Weight decay: ', wd)
+        resnet = ResNetH(img_rows, img_cols, wd)
         model = resnet.get_model()
     else:
         print('Model name not valid')
@@ -251,6 +265,9 @@ if __name__ == "__main__":
     elif opt == 'adam':
         adam = optimizers.Adam(amsgrad=amsgrad)
         optimizer = adam
+    elif opt == 'adadelta':
+        adadelta = optimizers.Adadelta(lr=1.0, rho=0.95, epsilon=None, decay=0.0)
+        optimizer = adadelta
 
     # reduce lr on plateau
     if lropf:

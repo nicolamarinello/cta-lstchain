@@ -105,7 +105,7 @@ class ClassifierV3:
         return self.model
 
 
-class CResNet:
+class ResNetXt:
 
     """
     Clean and simple Keras implementation of network architectures described in:
@@ -207,32 +207,32 @@ class CResNet:
                 return y
 
             # conv1
-            x = layers.Conv2D(8, kernel_size=(7, 7), strides=(2, 2), data_format='channels_first', padding='same')(x)
+            x = layers.Conv2D(64, kernel_size=(7, 7), strides=(2, 2), padding='same', data_format='channels_first')(x)
             x = add_common_layers(x)
 
             # conv2
-            x = layers.MaxPool2D(pool_size=(3, 3), strides=(2, 2), data_format='channels_first', padding='same')(x)
+            x = layers.MaxPool2D(pool_size=(3, 3), strides=(2, 2), padding='same', data_format='channels_first')(x)
             for i in range(3):
                 project_shortcut = True if i == 0 else False
-                x = residual_block(x, 16, 32, _project_shortcut=project_shortcut)
+                x = residual_block(x, 64, 128, _project_shortcut=project_shortcut)
 
             # conv3
             for i in range(4):
                 # down-sampling is performed by conv3_1, conv4_1, and conv5_1 with a stride of 2
                 strides = (2, 2) if i == 0 else (1, 1)
-                x = residual_block(x, 32, 64, _strides=strides)
+                x = residual_block(x, 128, 256, _strides=strides)
 
             # conv4
             for i in range(6):
                 strides = (2, 2) if i == 0 else (1, 1)
-                x = residual_block(x, 64, 128, _strides=strides)
+                x = residual_block(x, 256, 512, _strides=strides)
 
             # conv5
             for i in range(3):
                 strides = (2, 2) if i == 0 else (1, 1)
-                x = residual_block(x, 128, 256, _strides=strides)
+                x = residual_block(x, 512, 1024, _strides=strides)
 
-            x = layers.GlobalAveragePooling2D()(x)
+            x = layers.GlobalAveragePooling2D(data_format='channels_first')(x)
             x = layers.Dense(1, activation='sigmoid')(x)
 
             return x
@@ -982,8 +982,9 @@ class ResNetE:
 
 class ResNetF:
 
-    def __init__(self, img_rows, img_cols, wd):
+    def __init__(self, channels, img_rows, img_cols, wd):
 
+        self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.wd = wd
@@ -1040,7 +1041,7 @@ class ResNetF:
         Non-trainable params: 2,456     
         """
 
-        input_shape = (1, self.img_rows, self.img_cols)
+        input_shape = (self.channels, self.img_rows, self.img_cols)
 
         inputs = Input(shape=input_shape)  # output (1, 100, 100)
         y = resnet_layer(inputs=inputs, num_filters=16, strides=1)  # output (16, 100, 100)
@@ -1256,6 +1257,234 @@ class ResNetG:
         # linear projection
         y = resnet_layer(inputs=y, num_filters=128, kernel_size=1, strides=2, activation=None,
                          batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = AveragePooling2D(pool_size=2, data_format='channels_first')(y)
+        y = Flatten()(x)
+        outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
+        model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
+
+class ResNetH:
+
+    def __init__(self, img_rows, img_cols, wd):
+
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.wd = wd
+
+    def get_model(self):
+
+        wd = self.wd
+
+        def resnet_layer(inputs,
+                         num_filters=16,
+                         kernel_size=3,
+                         strides=1,
+                         activation='relu',
+                         batch_normalization=True,
+                         conv_first=True):
+            """2D Convolution-Batch Normalization-Activation stack builder
+            # Arguments
+                inputs (tensor): input tensor from input image or previous layer
+                num_filters (int): Conv2D number of filters
+                kernel_size (int): Conv2D square kernel dimensions
+                strides (int): Conv2D square stride dimensions
+                activation (string): activation name
+                batch_normalization (bool): whether to include batch normalization
+                conv_first (bool): conv-bn-activation (True) or
+                    bn-activation-conv (False)
+            # Returns
+                x (tensor): tensor as input to the next layer
+            """
+            conv = Conv2D(num_filters,
+                          kernel_size=kernel_size,
+                          strides=strides,
+                          padding='same',
+                          kernel_initializer='he_normal',
+                          kernel_regularizer=l2(wd),
+                          data_format="channels_first")
+
+            x = inputs
+            if conv_first:
+                x = conv(x)
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+            else:
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+                x = conv(x)
+            return x
+
+        """
+        Total params: 3,153,849
+        Trainable params: 3,150,485
+        Non-trainable params: 3,364  
+        """
+
+        input_shape = (1, self.img_rows, self.img_cols)
+
+        inputs = Input(shape=input_shape)  # output (1, 100, 100)
+        y = resnet_layer(inputs=inputs, num_filters=8, strides=1)  # output (16, 100, 100)
+
+        # stack 0
+        x = resnet_layer(inputs=y, num_filters=8, strides=1)
+        x = resnet_layer(inputs=x, num_filters=8, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=8, strides=1)
+        x = resnet_layer(inputs=x, num_filters=8, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=8, strides=1)
+        x = resnet_layer(inputs=x, num_filters=8, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 0
+        x = resnet_layer(inputs=y, num_filters=16, strides=2)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=16, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 1
+        x = resnet_layer(inputs=y, num_filters=32, strides=2)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=32, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=64, strides=2)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=64, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=128, strides=2)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=128, kernel_size=1, strides=2, activation=None,
+                         batch_normalization=False)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
         x = keras.layers.add([x, y])
         y = Activation('relu')(x)
 

@@ -93,6 +93,7 @@ def func(paths, ro, rc, rn):
             #    (len(LST_image_charge), img_rows, img_cols))
 
             lst_image_charge_interp = []
+            lst_image_peak_times_interp = []
             acc_idxs = []  # accepted indexes
 
             cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
@@ -100,6 +101,7 @@ def func(paths, ro, rc, rn):
             for i in range(0, len(LST_image_charge)):
 
                 image = LST_image_charge[i]
+                time = LST_image_peak_times[i]
 
                 boundary, picture, min_neighbors = cleaning_level['LSTCam']
                 clean = tailcuts_clean(
@@ -119,7 +121,9 @@ def func(paths, ro, rc, rn):
 
                     if intensity > 50 and leakage1_intensity < 0.2:
                         interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
+                        interp_time = griddata(points, time, (grid_x, grid_y), fill_value=0, method='cubic')
                         lst_image_charge_interp.append(interp_img)
+                        lst_image_peak_times_interp.append(interp_time)
                         acc_idxs += [i]
 
             lst_image_charge_interp = np.array(lst_image_charge_interp)
@@ -171,6 +175,8 @@ def func(paths, ro, rc, rn):
                 'LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
             data_file.create_dataset(
                 'LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
+            data_file.create_dataset(
+                'LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
             data_file.close()
 
             # in the interpolated files there will be all the original events
