@@ -64,6 +64,7 @@ if __name__ == "__main__":
     clr = FLAGS.clr
     es = FLAGS.es
     workers = FLAGS.workers
+    test_dirs = FLAGS.test_dirs
 
     # hard coded parameters
     shuffle = True
@@ -114,7 +115,7 @@ if __name__ == "__main__":
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
 
-    print('\n' + '======================================PARAMETERS======================================')
+    print('\n' + '======================================HYPERPARAMETERS======================================')
 
     print('Image rows: ', img_rows, ' Image cols: ', img_cols)
     print('Folders:', folders)
@@ -123,6 +124,8 @@ if __name__ == "__main__":
     print('Epochs:', epochs)
     print('Batch size: ', batch_size)
     print('Optimizer: ', opt)
+    print('Validation: ', val)
+    print('Test dirs: ', test_dirs)
 
     if es:
         print('--- Early stopping ---')
@@ -159,7 +162,7 @@ if __name__ == "__main__":
     print('Number of training protons: ' + str(train_protons))
     print('Number of validation batches: ' + str(int(len(val_idxs)/batch_size)))
 
-    print('=======================================================================================')
+    print('==================================================================================================')
 
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
@@ -333,7 +336,6 @@ if __name__ == "__main__":
         print('Best checkpoint: ', best)
 
         # test plots & results if test data is provided
-        test_dirs = FLAGS.test_dirs
         if len(test_dirs) > 0:
             csv = tester(test_dirs, best, batch_size, workers)
             test_plots(csv)
