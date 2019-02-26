@@ -115,54 +115,57 @@ if __name__ == "__main__":
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
 
-    print('\n' + '======================================HYPERPARAMETERS======================================')
+    hype_print = '\n' + '======================================HYPERPARAMETERS======================================'
 
-    print('Image rows: ', img_rows, ' Image cols: ', img_cols)
-    print('Folders:', folders)
-    print('Model: ', model_name)
-    print('Use arrival time: ', time)
-    print('Epochs:', epochs)
-    print('Batch size: ', batch_size)
-    print('Optimizer: ', opt)
-    print('Validation: ', val)
-    print('Test dirs: ', test_dirs)
+    hype_print += '\n' + 'Image rows: ' + str(img_rows) + ' Image cols: ' + str(img_cols)
+    hype_print += '\n' + 'Folders:' + str(folders)
+    hype_print += '\n' + 'Model: ' + str(model_name)
+    hype_print += '\n' + 'Use arrival time: ' + str(time)
+    hype_print += '\n' + 'Epochs:' + str(epochs)
+    hype_print += '\n' + 'Batch size: ' + str(batch_size)
+    hype_print += '\n' + 'Optimizer: ' + str(opt)
+    hype_print += '\n' + 'Validation: ' + str(val)
+    hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
 
     if es:
-        print('--- Early stopping ---')
-        print('Min delta: ', md_es)
-        print('Patience: ', p_es)
-        print('----------------------')
+        hype_print += '\n' + '--- Early stopping ---'
+        hype_print += '\n' + 'Min delta: ' + str(md_es)
+        hype_print += '\n' + 'Patience: ' + str(p_es)
+        hype_print += '\n' + '----------------------'
     if opt == 'sgd':
-        print('--- SGD ---')
-        print('Learning rate:', lr)
-        print('Decay: ', decay)
-        print('Momentum: ', momentum)
-        print('-----------')
+        hype_print += '\n' + '--- SGD ---'
+        hype_print += '\n' + 'Learning rate:' + str(lr)
+        hype_print += '\n' + 'Decay: ' + str(decay)
+        hype_print += '\n' + 'Momentum: ' + str(momentum)
+        hype_print += '\n' + '-----------'
     if lropf:
-        print('--- Reduce lr on plateau ---')
-        print('lr decrease factor: ', f_lrop)
-        print('Patience: ', p_lrop)
-        print('Min delta: ', md_lrop)
-        print('Cool down:', cd_lrop)
-        print('Min lr: ', mlr_lrop)
-        print('----------------------------')
+        hype_print += '\n' + '--- Reduce lr on plateau ---'
+        hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)
+        hype_print += '\n' + 'Patience: ' + str(p_lrop)
+        hype_print += '\n' + 'Min delta: ' + str(md_lrop)
+        hype_print += '\n' + 'Cool down:' + str(cd_lrop)
+        hype_print += '\n' + 'Min lr: ' + str(mlr_lrop)
+        hype_print += '\n' + '----------------------------'
     if clr:
-        print('--- CLR ---')
-        print('max_lr: ', max_lr)
-        print('End percentage: ', e_per)
-        print('Max momentum:', maximum_momentum)
-        print('Min momentum: ', minimum_momentum)
-        print('-----------')
+        hype_print += '\n' + '--- CLR ---'
+        hype_print += '\n' + 'max_lr: ' + str(max_lr)
+        hype_print += '\n' + 'End percentage: ' + str(e_per)
+        hype_print += '\n' + 'Max momentum:' + str(maximum_momentum)
+        hype_print += '\n' + 'Min momentum: ' + str(minimum_momentum)
+        hype_print += '\n' + '-----------'
 
-    print('Workers: ', workers)
-    print('Shuffle: ', shuffle)
+    hype_print += '\n' + 'Workers: ' + str(workers)
+    hype_print += '\n' + 'Shuffle: ' + str(shuffle)
 
-    print('Number of training batches: ' + str(len(training_generator)))
-    print('Number of training gammas: ' + str(train_gammas))
-    print('Number of training protons: ' + str(train_protons))
-    print('Number of validation batches: ' + str(int(len(val_idxs)/batch_size)))
+    hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
+    hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
+    hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
+    hype_print += '\n' + 'Number of validation batches: ' + str(int(len(val_idxs)/batch_size))
 
-    print('==================================================================================================')
+    hype_print += '\n' + '========================================================================================='
+
+    # printing on screen hyperparameters
+    print(hype_print)
 
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
@@ -234,6 +237,11 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
     root_dir = now.strftime(model_name + '_' + '%Y-%m-%d_%H-%M')
     mkdir(root_dir)
+
+    # writing hyperparameters on file
+    f = open(root_dir + '/hyperparameters.txt', 'w')
+    f.write(hype_print)
+    f.close()
 
     model.summary()
 
