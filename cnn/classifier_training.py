@@ -345,5 +345,5 @@ if __name__ == "__main__":
 
         # test plots & results if test data is provided
         if len(test_dirs) > 0:
-            csv = tester(test_dirs, best, batch_size, workers)
+            csv = tester(test_dirs, best, batch_size, time, workers)
             test_plots(csv)

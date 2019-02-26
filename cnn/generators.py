@@ -51,6 +51,21 @@ class DataGeneratorC(keras.utils.Sequence):
     def get_indexes(self):
         return self.indexes, self.val_indexes
 
+    def get_event(self, idx):
+
+        filename = self.h5files[idx[0]]
+
+        h5f = h5py.File(filename, 'r')
+        image = h5f['LST/LST_image_charge'][idx[1]]
+        time = h5f['LST/LST_image_peak_times'][idx[1]]
+        lst_idx = h5f['LST/LST_event_index'][idx[1]]
+        mc_energy = h5f['Event_Info/ei_mc_energy'][:][lst_idx]
+        h5f.close()
+
+        gt = idx[2]
+
+        return image, time, gt, mc_energy
+
     def get_val(self):
 
         # Generate indexes of the batch
