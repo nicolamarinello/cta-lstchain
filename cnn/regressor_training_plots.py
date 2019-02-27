@@ -1,20 +1,10 @@
-import pickle
 import argparse
-import matplotlib
-matplotlib.use('TkAgg')
+import pickle
+
 import matplotlib.pyplot as plt
 
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '--log', type=str, default='', help='Training history file.', required=True)
-
-    FLAGS, unparsed = parser.parse_known_args()
-
-    filen = FLAGS.log
+def train_plots(filen, tran):
 
     with open(filen, 'rb') as f:
         x = pickle.load(f)
@@ -33,11 +23,11 @@ if __name__ == "__main__":
 
     plt.suptitle('Training history')
 
-    plt.savefig('regressor_training.png', transparent=True)
+    plt.savefig('regressor_training.png', transparent=tran)
 
     fig2 = plt.figure(figsize=(10, 4))
 
-    epochs = range(1, len(val_losses)+1)
+    epochs = range(1, len(val_losses) + 1)
 
     plt.plot(epochs, val_losses)
     plt.xlabel('Epoch')
@@ -47,7 +37,20 @@ if __name__ == "__main__":
 
     plt.suptitle('Validation history')
 
-    plt.savefig('regressor_validation.png', transparent=True)
+    plt.savefig('regressor_validation.png', transparent=tran)
 
-    # plt.show()
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--log', type=str, default='', help='Training history file.', required=True)
+    parser.add_argument(
+        '--transparent', type=bool, default=False, help='Specify whether plots have to be transparent.', required=False)
+
+    FLAGS, unparsed = parser.parse_known_args()
+
+    filen = FLAGS.log
+    tran = FLAGS.transparent
+
+    train_plots(filen, tran)

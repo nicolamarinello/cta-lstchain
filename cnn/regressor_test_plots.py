@@ -1,31 +1,24 @@
-import pandas as pd
-from scipy.stats import norm
 import argparse
-import matplotlib
-#matplotlib.use('Agg')
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import scipy.stats
 from matplotlib import gridspec
 from matplotlib.pyplot import figure
-import scipy.stats
+from scipy.stats import norm
 
-if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '--pkl', type=str, default='', help='pkl test file.', required=True)
-
-    FLAGS, unparsed = parser.parse_known_args()
-
-    pkl = FLAGS.pkl
+def test_plots(pkl):
+    folder = os.path.dirname(pkl)
     df = pd.read_pickle(pkl)
 
     figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
 
     # histogram
     plt.subplot(221)
-    difE = ((df['GroundTruth']-df['Predicted'])/df['GroundTruth'])
+    difE = ((df['GroundTruth'] - df['Predicted']) / df['GroundTruth'])
     section = difE[abs(difE) < 1.5]
     mu, sigma = norm.fit(section)
     print(mu, sigma)
@@ -33,8 +26,8 @@ if __name__ == "__main__":
     y = norm.pdf(bins, mu, sigma)
     l = plt.plot(bins, y, 'r--', linewidth=2)
     plt.xlabel('$(log_{10}(E_{gammas})-log_{10}(E_{rec}))/log_{10}(E_{gammas})$')
-    plt.figtext(0.15, 0.7, 'Mean: '+str(round(mu, 4)), fontsize=10)
-    plt.figtext(0.15, 0.65, 'Std: '+str(round(sigma, 4)), fontsize=10)
+    plt.figtext(0.15, 0.7, 'Mean: ' + str(round(mu, 4)), fontsize=10)
+    plt.figtext(0.15, 0.65, 'Std: ' + str(round(sigma, 4)), fontsize=10)
 
     # histogram2d
     plt.subplot(222)
@@ -46,7 +39,8 @@ if __name__ == "__main__":
 
     # Plot a profile
     subplot = plt.subplot(223)
-    means_result = scipy.stats.binned_statistic(df['GroundTruth'], [difE, difE ** 2], bins=50, range=(1, 6), statistic='mean')
+    means_result = scipy.stats.binned_statistic(df['GroundTruth'], [difE, difE ** 2], bins=50, range=(1, 6),
+                                                statistic='mean')
     means, means2 = means_result.statistic
     standard_deviations = np.sqrt(means2 - means ** 2)
     bin_edges = means_result.bin_edges
@@ -68,6 +62,19 @@ if __name__ == "__main__":
 
     # plt.subplots_adjust(hspace=0.5)
 
-    plt.savefig('energy_perf.png', transparent=False)
+    plt.savefig(folder + '/energy_perf.png', transparent=False)
 
     # plt.show()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--pkl', type=str, default='', help='pkl test file.', required=True)
+
+    FLAGS, unparsed = parser.parse_known_args()
+
+    pkl = FLAGS.pkl
+
+    test_plots(pkl)

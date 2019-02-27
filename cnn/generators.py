@@ -180,27 +180,33 @@ class DataGeneratorC(keras.utils.Sequence):
             # if y[i] == 1:
             #    x[i,] = np.full((100, 100), 1)
 
-        x = x.reshape(x.shape[0], 1, 100, 100)
+        # x = x.reshape(x.shape[0], 1, 100, 100)
 
         return x, y
 
 
 class DataGeneratorR(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, h5files, feature, batch_size=32, shuffle=True):
+    def __init__(self, h5files, feature, batch_size=32, arrival_time=False, val_per=0.2, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
         self.feature = feature
         self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
         self.shuffle = shuffle
-        self.n_images = 0
         self.generate_indexes()
+        self.arrival_time = arrival_time
         self.on_epoch_end()
+        self.val_indexes = np.array([])
+        if val_per > 0:
+            # split into training and validation
+            self.indexes, self.val_indexes = np.split(self.indexes, [int(self.indexes.shape[0] * (1 - val_per))])
+            # sort val_indexes by file index to read images faster from disk
+            self.val_indexes = np.sort(self.val_indexes.view('i8,i8,i8'), order=['f1'], axis=0).view(np.int)
 
     def __len__(self):
         'Denotes the number of batches per epoch'
         # total number of images in the dataset
-        return int(np.floor(self.n_images/self.batch_size))
+        return int(np.floor(self.indexes.shape[0]/self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -219,7 +225,23 @@ class DataGeneratorR(keras.utils.Sequence):
         return x, y
 
     def get_indexes(self):
-        return self.indexes
+        return self.indexes[0:self.__len__() * self.batch_size], self.val_indexes
+
+    def get_val(self):
+
+        # Generate indexes of the batch
+        indexes = self.val_indexes
+
+        old_bs = self.batch_size
+
+        self.batch_size = len(self.val_indexes)
+
+        # Generate data
+        x, y = self.__data_generation(indexes)
+
+        self.batch_size = old_bs
+
+        return x, y
 
     def chunkit(self, seq, num):
 
@@ -289,7 +311,7 @@ class DataGeneratorR(keras.utils.Sequence):
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, 100, 100])
+        x = np.empty([self.batch_size, self.arrival_time+1, 100, 100])
         y = np.empty([self.batch_size], dtype=float)
 
         # Generate data
@@ -310,6 +332,6 @@ class DataGeneratorR(keras.utils.Sequence):
 
             h5f.close()
 
-        x = x.reshape(x.shape[0], 1, 100, 100)
+        # x = x.reshape(x.shape[0], 1, 100, 100)
 
         return x, y

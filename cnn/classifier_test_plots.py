@@ -1,15 +1,12 @@
-import matplotlib
-
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import pandas as pd
-from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
-from prettytable import PrettyTable
-
 import argparse
 import math
-import numpy as np
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from prettytable import PrettyTable
+from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 
 def test_plots(csv):

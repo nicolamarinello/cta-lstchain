@@ -49,7 +49,7 @@ def tester(folders, mdl, batch_size, atime, workers):
     nrow = sample_length
     ncol = 2
     geom = CameraGeometry.from_name("LSTCam")
-    fig, axs = plt.subplots(nrows=nrow, ncols=ncol, figsize=(20, 5))
+    fig, axs = plt.subplots(nrows=nrow, ncols=ncol, figsize=(5, 1))
 
     for l, i in enumerate(cento):
         image, time, gt, mc_energy = test_generator.get_event(i)

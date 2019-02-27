@@ -1,17 +1,23 @@
-from regressors import RegressorV2, RegressorV3
-from os import mkdir
-from utils import get_all_files
-from keras import optimizers
-from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
-from time import time
-import random
-from generators import DataGeneratorR
-from losseshistory import LossHistoryR
 import argparse
 import datetime
 import pickle
-import numpy as np
+import sys
+from os import listdir
+from os import mkdir
+from os.path import isfile, join
 
+import keras
+from keras import optimizers
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+
+from clr import OneCycleLR
+from generators import DataGeneratorR
+from losseshistory import LossHistoryR
+from regressor_test_plots import test_plots
+from regressor_tester import tester
+from regressor_training_plots import train_plots
+from regressors import RegressorV2, RegressorV3
+from utils import get_all_files
 
 if __name__ == "__main__":
 
@@ -22,93 +28,273 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
+        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
+    parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
         '--batch_size', type=int, default=10, help='Batch size.', required=True)
     parser.add_argument(
+        '--opt', type=str, default=False, help='Specify the optimizer.', required=False)
+    parser.add_argument(
+        '--val', type=bool, default=False, help='Specify if compute validation.', required=False)
+    parser.add_argument(
+        '--lrop', type=bool, default=False, help='Specify if use reduce lr on plateau.', required=False)
+    parser.add_argument(
+        '--clr', type=bool, default=False, help='Specify if use CLR.', required=False)
+    parser.add_argument(
+        '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
+    parser.add_argument(
         '--feature', type=str, default='energy', help='Feature to train/predict.', required=True)
     parser.add_argument(
-        '--patience', type=int, default=10, help='Patience.', required=True)
-    parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
+    parser.add_argument(
+        '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
 
-    # Parameters
-    img_rows, img_cols = 100, 100
+    # cmd line parameters
+    folders = FLAGS.dirs
+    model_name = FLAGS.model
+    time = FLAGS.time
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
-    model_name = FLAGS.model
-    print(model_name)
-    shuffle = True
-    PATIENCE = FLAGS.patience
-
+    opt = FLAGS.opt
+    val = FLAGS.val
+    lropf = FLAGS.lrop
+    clr = FLAGS.clr
+    es = FLAGS.es
     feature = FLAGS.feature
+    workers = FLAGS.workers
+    test_dirs = FLAGS.test_dirs
 
-    folders = FLAGS.dirs
+    # hard coded parameters
+    shuffle = True
+    img_rows, img_cols = 100, 100
+    channels = 1
+    if time:
+        channels = 2
+
+    # early stopping
+    md_es = 0.01  # min delta
+    p_es = 25  # patience
+
+    # sgd
+    lr = 0.01  # lr
+    decay = 0  # decay
+    momentum = 0.9  # momentum
+
+    # adam
+    amsgrad = True
+
+    # reduce lr on plateau
+    f_lrop = 0.1  # factor
+    p_lrop = 25  # patience
+    md_lrop = 0.005  # min delta
+    cd_lrop = 5  # cool down
+    mlr_lrop = lr / 100  # min lr
+
+    # clr
+    max_lr = 0.032
+    e_per = 0.1
+    maximum_momentum = 0.95
+    minimum_momentum = 0.90
 
     h5files = get_all_files(folders)
-    random.shuffle(h5files)
 
-    n_files = len(h5files)
-    n_train = int(np.floor(n_files * 0.8))
+    if clr and lropf:
+        print('Cannot use CLR and Reduce lr on plateau')
+        sys.exit(1)
 
-    # Generators
+    # generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(h5files[0:n_train], feature=feature, batch_size=batch_size, shuffle=shuffle)
-    print('Number of training batches: ' + str(len(training_generator)))
-    # train_idxs = training_generator.get_indexes()
+    training_generator = DataGeneratorR(h5files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
+
+    train_idxs, val_idxs = training_generator.get_indexes()
     # train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
     # train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
-    # print('Number of training gammas: ' + str(train_gammas))
-    # print('Number of training protons: ' + str(train_protons))
-
-    print('Building validation generator...')
-    validation_generator = DataGeneratorR(h5files[n_train:], feature=feature, batch_size=batch_size, shuffle=shuffle)
-    print('Number of validation batches: ' + str(len(validation_generator)))
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
-
     # print(class_weight)
 
-    # if model_name == 'ClassifierV1':
-    #    class_v1 = ClassifierV1(img_rows, img_cols)
-    #    model = class_v1.get_model()
+    hype_print = '\n' + '======================================HYPERPARAMETERS======================================'
+
+    hype_print += '\n' + 'Image rows: ' + str(img_rows) + ' Image cols: ' + str(img_cols)
+    hype_print += '\n' + 'Folders:' + str(folders)
+    hype_print += '\n' + 'Model: ' + str(model_name)
+    hype_print += '\n' + 'Use arrival time: ' + str(time)
+    hype_print += '\n' + 'Epochs:' + str(epochs)
+    hype_print += '\n' + 'Batch size: ' + str(batch_size)
+    hype_print += '\n' + 'Optimizer: ' + str(opt)
+    hype_print += '\n' + 'Feature: ' + str(feature)
+    hype_print += '\n' + 'Validation: ' + str(val)
+    hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
+
+    if es:
+        hype_print += '\n' + '--- Early stopping ---'
+        hype_print += '\n' + 'Min delta: ' + str(md_es)
+        hype_print += '\n' + 'Patience: ' + str(p_es)
+        hype_print += '\n' + '----------------------'
+    if opt == 'sgd':
+        hype_print += '\n' + '--- SGD ---'
+        hype_print += '\n' + 'Learning rate:' + str(lr)
+        hype_print += '\n' + 'Decay: ' + str(decay)
+        hype_print += '\n' + 'Momentum: ' + str(momentum)
+        hype_print += '\n' + '-----------'
+    if lropf:
+        hype_print += '\n' + '--- Reduce lr on plateau ---'
+        hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)
+        hype_print += '\n' + 'Patience: ' + str(p_lrop)
+        hype_print += '\n' + 'Min delta: ' + str(md_lrop)
+        hype_print += '\n' + 'Cool down:' + str(cd_lrop)
+        hype_print += '\n' + 'Min lr: ' + str(mlr_lrop)
+        hype_print += '\n' + '----------------------------'
+    if clr:
+        hype_print += '\n' + '--- CLR ---'
+        hype_print += '\n' + 'max_lr: ' + str(max_lr)
+        hype_print += '\n' + 'End percentage: ' + str(e_per)
+        hype_print += '\n' + 'Max momentum:' + str(maximum_momentum)
+        hype_print += '\n' + 'Min momentum: ' + str(minimum_momentum)
+        hype_print += '\n' + '-----------'
+
+    hype_print += '\n' + 'Workers: ' + str(workers)
+    hype_print += '\n' + 'Shuffle: ' + str(shuffle)
+
+    hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
+    # hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
+    # hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
+    hype_print += '\n' + 'Number of validation batches: ' + str(int(len(val_idxs) / batch_size))
+
+    hype_print += '\n' + '========================================================================================='
+
+    # printing on screen hyperparameters
+    print(hype_print)
+
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(img_rows, img_cols)
         model = class_v2.get_model()
     elif model_name == 'RegressorV3':
         class_v3 = RegressorV3(img_rows, img_cols)
         model = class_v3.get_model()
-    # else:
-    #    print('Model name not valid')
-    #    sys.exit(1)
+    else:
+        print('Model name not valid')
+        sys.exit(1)
+
+    if val:
+        print('Getting validation data...')
+        X_val, Y_val = training_generator.get_val()
 
     # create a folder to keep model & results
     now = datetime.datetime.now()
     root_dir = now.strftime(model_name + '_' + feature + '_' + '%Y-%m-%d_%H-%M')
     mkdir(root_dir)
 
+    # writing hyperparameters on file
+    f = open(root_dir + '/hyperparameters.txt', 'w')
+    f.write(hype_print)
+    f.close()
+
     model.summary()
 
-    checkpoint = ModelCheckpoint(
-        filepath=root_dir + '/' + model_name + '_{epoch:02d}_{val_loss:.5f}.h5')
+    callbacks = []
 
-    tensorboard = TensorBoard(log_dir=root_dir + "/logs/{}".format(time()), update_freq='batch')
+    if val:
+        checkpoint = ModelCheckpoint(
+            filepath=root_dir + '/' + model_name + '_{epoch:02d}_{loss:.5f}_{val_loss:.5f}.h5', monitor='val_loss',
+            save_best_only=True)
+        callbacks.append(checkpoint)
+
+    # tensorboard = keras.callbacks.TensorBoard(log_dir=root_dir + "/logs",
+    #                                          histogram_freq=5,
+    #                                          batch_size=batch_size,
+    #                                          write_images=True,
+    #                                          update_freq=batch_size * 100)
+
     history = LossHistoryR()
 
-    # Early stopping callback
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=PATIENCE, verbose=1, mode='min')
+    csv_callback = keras.callbacks.CSVLogger(root_dir + '/epochs_log.csv', separator=',', append=False)
 
-    callbacks = [tensorboard, history, checkpoint, early_stopping]
+    callbacks.append(history)
+    callbacks.append(csv_callback)
 
-    # sgd = optimizers.SGD(lr=0.09, decay=1e-6, momentum=0.9, nesterov=True)
+    # callbacks.append(tensorboard)
 
-    model.compile(optimizer='adam', loss='mean_absolute_error')
+    # sgd
+    optimizer = None
+    if opt == 'sgd':
+        sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
+        optimizer = sgd
+    elif opt == 'adam':
+        adam = optimizers.Adam(amsgrad=amsgrad)
+        optimizer = adam
+    elif opt == 'adadelta':
+        adadelta = optimizers.Adadelta(lr=1.0, rho=0.95, epsilon=None, decay=0.0)
+        optimizer = adadelta
 
-    model.fit_generator(generator=training_generator, validation_data=validation_generator, epochs=epochs, verbose=1,
-                        use_multiprocessing=True, workers=FLAGS.workers, shuffle=False, callbacks=callbacks)
+    # reduce lr on plateau
+    if lropf:
+        lrop = keras.callbacks.ReduceLROnPlateau(monitor='val_acc', factor=f_lrop, patience=p_lrop, verbose=1,
+                                                 mode='auto',
+                                                 min_delta=md_lrop, cooldown=cd_lrop, min_lr=mlr_lrop)
+        callbacks.append(lrop)
+
+    if es:
+        # early stopping
+        early_stopping = EarlyStopping(monitor='val_acc', min_delta=md_es, patience=p_es, verbose=1, mode='max')
+        callbacks.append(early_stopping)
+
+    # clr
+    if clr:
+        lr_manager_clr = OneCycleLR(len(training_generator) * batch_size, epochs, batch_size, max_lr,
+                                    end_percentage=e_per,
+                                    maximum_momentum=maximum_momentum, minimum_momentum=minimum_momentum)
+        callbacks.append(lr_manager_clr)
+
+    model.compile(optimizer=optimizer, loss='mean_absolute_error')
+
+    if val:
+        model.fit_generator(generator=training_generator,
+                            validation_data=(X_val, Y_val),
+                            epochs=epochs,
+                            verbose=1,
+                            max_queue_size=10,
+                            use_multiprocessing=True,
+                            workers=workers,
+                            shuffle=False,
+                            callbacks=callbacks)
+    else:
+        model.fit_generator(generator=training_generator,
+                            epochs=epochs,
+                            verbose=1,
+                            max_queue_size=10,
+                            use_multiprocessing=True,
+                            workers=workers,
+                            shuffle=False,
+                            callbacks=callbacks)
 
     # save results
-    with open(root_dir + '/train-history', 'wb') as file_pi:
+    train_history = root_dir + '/train-history'
+    with open(train_history, 'wb') as file_pi:
         pickle.dump(history.dic, file_pi)
+
+    # post training operations
+
+    # training plots
+    train_plots(train_history, False)
+
+    if val:
+        # get the best model on validation
+        val_loss = history.dic['val_loss']
+        m = val_loss.index(min(val_loss))  # get the index with the highest accuracy
+
+        model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
+                             (isfile(join(root_dir, f)) and f.startswith(
+                                 model_name + '_' + '{:02d}'.format(m + 1)))]
+
+        best = model_checkpoints[0]
+
+        print('Best checkpoint: ', best)
+
+        # test plots & results if test data is provided
+        if len(test_dirs) > 0:
+            pkl = tester(test_dirs, best, batch_size, time, workers)
+            test_plots(pkl)
