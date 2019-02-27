@@ -49,7 +49,7 @@ class DataGeneratorC(keras.utils.Sequence):
         return x, y
 
     def get_indexes(self):
-        return self.indexes, self.val_indexes
+        return self.indexes[0:self.__len__()*self.batch_size], self.val_indexes
 
     def get_event(self, idx):
 

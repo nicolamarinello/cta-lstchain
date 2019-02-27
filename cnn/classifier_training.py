@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
-        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=True)
+        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
