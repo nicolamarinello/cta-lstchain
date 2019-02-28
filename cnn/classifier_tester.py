@@ -19,13 +19,13 @@ def tester(folders, mdl, batch_size, atime, workers):
     model = load_model(mdl)
 
     print('Building test generator...')
-    test_generator = DataGeneratorC(h5files, batch_size=batch_size, arrival_time=atime, val_per=0, shuffle=False)
+    test_generator = DataGeneratorC(h5files, batch_size=batch_size, arrival_time=atime, shuffle=False)
     print('Number of test batches: ' + str(len(test_generator)))
 
     pr_labels = model.predict_generator(generator=test_generator, steps=None, max_queue_size=10, workers=workers,
                                         use_multiprocessing=True, verbose=1)
 
-    test_idxs, _ = test_generator.get_indexes()  # ground truth labels
+    test_idxs = test_generator.get_indexes()  # ground truth labels
     gt_labels = test_idxs[:, 2].reshape(test_idxs[:, 2].shape[0])
     pr_labels = pr_labels.reshape(pr_labels.shape[0])
 

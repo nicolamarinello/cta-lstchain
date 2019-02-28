@@ -8,7 +8,7 @@ import os
 
 class DataGeneratorC(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, h5files, batch_size=32, arrival_time=False, val_per=0.2, shuffle=True):
+    def __init__(self, h5files, batch_size=32, arrival_time=False, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
         self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
@@ -16,12 +16,6 @@ class DataGeneratorC(keras.utils.Sequence):
         self.generate_indexes()
         self.arrival_time = arrival_time
         self.on_epoch_end()
-        self.val_indexes = np.array([])
-        if val_per > 0:
-            # split into training and validation
-            self.indexes, self.val_indexes = np.split(self.indexes, [int(self.indexes.shape[0]*(1-val_per))])
-            # sort val_indexes by file index to read images faster from disk
-            self.val_indexes = np.sort(self.val_indexes.view('i8,i8,i8'), order=['f1'], axis=0).view(np.int)
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -49,7 +43,7 @@ class DataGeneratorC(keras.utils.Sequence):
         return x, y
 
     def get_indexes(self):
-        return self.indexes[0:self.__len__()*self.batch_size], self.val_indexes
+        return self.indexes[0:self.__len__()*self.batch_size]
 
     def get_event(self, idx):
 
@@ -66,14 +60,14 @@ class DataGeneratorC(keras.utils.Sequence):
 
         return image, time, gt, mc_energy
 
-    def get_val(self):
+    def get_all(self):
 
         # Generate indexes of the batch
-        indexes = self.val_indexes
+        indexes = self.indexes
 
         old_bs = self.batch_size
 
-        self.batch_size = len(self.val_indexes)
+        self.batch_size = len(self.indexes)
 
         # Generate data
         x, y = self.__data_generation(indexes)
