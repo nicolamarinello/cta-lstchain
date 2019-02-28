@@ -6,8 +6,9 @@ from keras import regularizers
 
 class RegressorV2:
 
-    def __init__(self, img_rows, img_cols):
+    def __init__(self, channels, img_rows, img_cols):
 
+        self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.model = Sequential()   # define the network model
@@ -15,7 +16,7 @@ class RegressorV2:
     def get_model(self):
 
         cf = 'channels_first'
-        ishape = (1, self.img_rows, self.img_cols)
+        ishape = (self.channels, self.img_rows, self.img_cols)
 
         self.model.add(Conv2D(16, kernel_size=(3, 3), input_shape=ishape,  data_format=cf, activation='relu'))
         self.model.add(Conv2D(16, kernel_size=(3, 3), data_format=cf, activation='relu'))

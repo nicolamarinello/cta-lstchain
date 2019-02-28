@@ -4,8 +4,8 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from ctapipe.instrument import CameraGeometry
-from ctapipe.visualization import CameraDisplay
+# from ctapipe.instrument import CameraGeometry
+# from ctapipe.visualization import CameraDisplay
 from keras.models import load_model
 
 from generators import DataGeneratorC
@@ -35,16 +35,17 @@ def tester(folders, mdl, batch_size, atime, workers):
 
     test_idxs_wrong = test_idxs[wrong]
 
-    sample_length = 20
+    sample_length = 1000
 
     if sample_length >= len(test_idxs_wrong):
         sample_length = len(test_idxs_wrong) - 1
 
-    # choose randomly 100 of them
+    # choose randomly 1000 of them
     rnd_idxs = np.random.randint(len(test_idxs_wrong), size=sample_length)
     cento = test_idxs_wrong[rnd_idxs, :]
     # cento = np.random.choice(test_idxs_wrong, sample_length)
 
+    """
     # create pdf report
     nrow = sample_length
     ncol = 2
@@ -67,10 +68,12 @@ def tester(folders, mdl, batch_size, atime, workers):
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
     fig.savefig(mdl + '_misc_report.pdf', format='pdf')
+    
+    """
 
     # histogram based on failed predictions
     mis_en = np.array([])
-    for l, i in enumerate(test_idxs_wrong):
+    for l, i in enumerate(cento):
         image, time, gt, mc_energy = test_generator.get_event(i)
         mis_en = np.append(mis_en, [mc_energy])
 

@@ -1,12 +1,14 @@
 import argparse
 import datetime
 import pickle
+import random
 import sys
 from os import listdir
 from os import mkdir
 from os.path import isfile, join
 
 import keras
+import numpy as np
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
@@ -38,6 +40,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--val', type=bool, default=False, help='Specify if compute validation.', required=False)
     parser.add_argument(
+        '--red', type=float, default=1, help='Specify if use reduced training set.', required=False)
+    parser.add_argument(
         '--lrop', type=bool, default=False, help='Specify if use reduce lr on plateau.', required=False)
     parser.add_argument(
         '--clr', type=bool, default=False, help='Specify if use CLR.', required=False)
@@ -60,6 +64,7 @@ if __name__ == "__main__":
     batch_size = FLAGS.batch_size
     opt = FLAGS.opt
     val = FLAGS.val
+    red = FLAGS.red
     lropf = FLAGS.lrop
     clr = FLAGS.clr
     es = FLAGS.es
@@ -100,6 +105,14 @@ if __name__ == "__main__":
     minimum_momentum = 0.90
 
     h5files = get_all_files(folders)
+    random.shuffle(h5files)
+    # reduction = int(len(h5files)*red)
+    # h5files = h5files[:reduction]
+    n_files = len(h5files)
+    val_per = 0.2
+    tv_idx = int(n_files * (1 - val_per))
+    training_files = h5files[:tv_idx]
+    validation_files = h5files[tv_idx:]
 
     if clr and lropf:
         print('Cannot use CLR and Reduce lr on plateau')
@@ -107,11 +120,18 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(h5files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
+    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
 
-    train_idxs, val_idxs = training_generator.get_indexes()
-    # train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
-    # train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
+    print('Building validation generator...')
+    validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False)
+
+    valid_idxs = training_generator.get_indexes()
+    valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
+    valid_protons = np.unique(valid_idxs[:, 2], return_counts=True)[1][0]
+
+    train_idxs = training_generator.get_indexes()
+    train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
+    train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
@@ -127,6 +147,7 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Optimizer: ' + str(opt)
     hype_print += '\n' + 'Feature: ' + str(feature)
     hype_print += '\n' + 'Validation: ' + str(val)
+    hype_print += '\n' + 'Training set percentage: ' + str(red)
     hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
 
     if es:
@@ -160,9 +181,11 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Shuffle: ' + str(shuffle)
 
     hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
-    # hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
-    # hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
-    hype_print += '\n' + 'Number of validation batches: ' + str(int(len(val_idxs) / batch_size))
+    hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
+    hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
+    hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
+    hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
+    hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
     hype_print += '\n' + '========================================================================================='
 
@@ -170,7 +193,7 @@ if __name__ == "__main__":
     print(hype_print)
 
     if model_name == 'RegressorV2':
-        class_v2 = RegressorV2(img_rows, img_cols)
+        class_v2 = RegressorV2(channels, img_rows, img_cols)
         model = class_v2.get_model()
     elif model_name == 'RegressorV3':
         class_v3 = RegressorV3(img_rows, img_cols)
@@ -253,7 +276,9 @@ if __name__ == "__main__":
 
     if val:
         model.fit_generator(generator=training_generator,
-                            validation_data=(X_val, Y_val),
+                            validation_data=validation_generator,
+                            steps_per_epoch=len(training_generator) * red,
+                            validation_steps=len(validation_generator) * red,
                             epochs=epochs,
                             verbose=1,
                             max_queue_size=10,
@@ -263,6 +288,7 @@ if __name__ == "__main__":
                             callbacks=callbacks)
     else:
         model.fit_generator(generator=training_generator,
+                            steps_per_epoch=len(training_generator) * red,
                             epochs=epochs,
                             verbose=1,
                             max_queue_size=10,

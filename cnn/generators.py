@@ -158,13 +158,13 @@ class DataGeneratorC(keras.utils.Sequence):
 
             # print(row[0])
 
-            filename = self.h5files[row[0]]
+            filename = self.h5files[int(row[0])]
 
             h5f = h5py.File(filename, 'r')
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][row[1]]
+            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 0] = h5f['LST/LST_image_peak_times_interp'][row[1]]
+                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
             h5f.close()
             # Store class
             y[i] = row[2]
@@ -190,12 +190,6 @@ class DataGeneratorR(keras.utils.Sequence):
         self.generate_indexes()
         self.arrival_time = arrival_time
         self.on_epoch_end()
-        self.val_indexes = np.array([])
-        if val_per > 0:
-            # split into training and validation
-            self.indexes, self.val_indexes = np.split(self.indexes, [int(self.indexes.shape[0] * (1 - val_per))])
-            # sort val_indexes by file index to read images faster from disk
-            self.val_indexes = np.sort(self.val_indexes.view('i8,i8,i8'), order=['f1'], axis=0).view(np.int)
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -219,16 +213,16 @@ class DataGeneratorR(keras.utils.Sequence):
         return x, y
 
     def get_indexes(self):
-        return self.indexes[0:self.__len__() * self.batch_size], self.val_indexes
+        return self.indexes[0:self.__len__() * self.batch_size]
 
-    def get_val(self):
+    def get_all(self):
 
         # Generate indexes of the batch
-        indexes = self.val_indexes
+        indexes = self.indexes
 
         old_bs = self.batch_size
 
-        self.batch_size = len(self.val_indexes)
+        self.batch_size = len(self.indexes)
 
         # Generate data
         x, y = self.__data_generation(indexes)
@@ -295,8 +289,6 @@ class DataGeneratorR(keras.utils.Sequence):
         for key, value in return_dict.items():
             self.indexes = np.append(self.indexes, value, axis=0)
 
-        self.n_images = self.indexes.shape[0]
-
     def on_epoch_end(self):
         'Updates indexes after each epoch'
         if self.shuffle:
@@ -316,7 +308,9 @@ class DataGeneratorR(keras.utils.Sequence):
             h5f = h5py.File(filename, 'r')
 
             # Store image
-            x[i, ] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            if self.arrival_time:
+                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][row[1]]
 
             # Store features
             if self.feature == 'energy':
