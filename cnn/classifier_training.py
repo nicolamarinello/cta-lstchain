@@ -183,11 +183,6 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
     hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
-    hype_print += '\n' + '========================================================================================='
-
-    # printing on screen hyperparameters
-    print(hype_print)
-
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
         model = class_v1.get_model()
@@ -233,7 +228,7 @@ if __name__ == "__main__":
         model = resnet.get_model()
     elif model_name == 'ResNetF':
         wd = 1e-4
-        print('Weight decay: ', wd)
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetF(channels, img_rows, img_cols, wd)
         model = resnet.get_model()
     elif model_name == 'ResNetG':
@@ -249,6 +244,11 @@ if __name__ == "__main__":
     else:
         print('Model name not valid')
         sys.exit(1)
+
+    hype_print += '\n' + '========================================================================================='
+
+    # printing on screen hyperparameters
+    print(hype_print)
 
     # create a folder to keep model & results
     now = datetime.datetime.now()

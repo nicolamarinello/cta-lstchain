@@ -66,6 +66,8 @@ def test_plots(pkl):
 
     # plt.show()
 
+    print('Plot done')
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

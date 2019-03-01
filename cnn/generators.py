@@ -181,7 +181,7 @@ class DataGeneratorC(keras.utils.Sequence):
 
 class DataGeneratorR(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, h5files, feature, batch_size=32, arrival_time=False, val_per=0.2, shuffle=True):
+    def __init__(self, h5files, feature, batch_size=32, arrival_time=False, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
         self.feature = feature
@@ -190,6 +190,8 @@ class DataGeneratorR(keras.utils.Sequence):
         self.generate_indexes()
         self.arrival_time = arrival_time
         self.on_epoch_end()
+        # self.test_mode = test_mode
+        # self.feature_array = np.array([])
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -209,6 +211,9 @@ class DataGeneratorR(keras.utils.Sequence):
         x, y = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
+
+        # if self.test_mode:
+        #    self.feature_array = np.append(self.feature_array, y)
 
         return x, y
 
@@ -230,6 +235,9 @@ class DataGeneratorR(keras.utils.Sequence):
         self.batch_size = old_bs
 
         return x, y
+
+    def get_feat_array(self):
+        return self.feature_array
 
     def chunkit(self, seq, num):
 

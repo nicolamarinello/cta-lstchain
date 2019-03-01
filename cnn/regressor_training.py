@@ -18,7 +18,7 @@ from losseshistory import LossHistoryR
 from regressor_test_plots import test_plots
 from regressor_tester import tester
 from regressor_training_plots import train_plots
-from regressors import RegressorV2, RegressorV3
+from regressors import RegressorV2, RegressorV3, ResNetF
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -120,10 +120,12 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
+    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, feature=feature,
+                                        shuffle=shuffle)
 
     print('Building validation generator...')
-    validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False)
+    validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, feature=feature,
+                                          shuffle=False)
 
     valid_idxs = training_generator.get_indexes()
     valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
@@ -187,24 +189,25 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
     hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
-    hype_print += '\n' + '========================================================================================='
-
-    # printing on screen hyperparameters
-    print(hype_print)
-
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
         model = class_v2.get_model()
     elif model_name == 'RegressorV3':
         class_v3 = RegressorV3(img_rows, img_cols)
         model = class_v3.get_model()
+    elif model_name == 'ResNetF':
+        wd = 1e-5
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetF(channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
     else:
         print('Model name not valid')
         sys.exit(1)
 
-    if val:
-        print('Getting validation data...')
-        X_val, Y_val = training_generator.get_val()
+    hype_print += '\n' + '========================================================================================='
+
+    # printing on screen hyperparameters
+    print(hype_print)
 
     # create a folder to keep model & results
     now = datetime.datetime.now()
@@ -322,5 +325,5 @@ if __name__ == "__main__":
 
         # test plots & results if test data is provided
         if len(test_dirs) > 0:
-            pkl = tester(test_dirs, best, batch_size, time, workers)
+            pkl = tester(test_dirs, best, batch_size, time, feature, workers)
             test_plots(pkl)

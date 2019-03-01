@@ -1,41 +1,63 @@
 import argparse
-import os
 import random
 
 import numpy as np
 import pandas as pd
+from keras.models import load_model
+from keras.utils.data_utils import OrderedEnqueuer
+from keras.utils.generic_utils import Progbar
 
 from generators import DataGeneratorR
 from utils import get_all_files
 
 
-def tester(folders, model, batch_size, time, feature, workers):
+def tester(folders, mdl, batch_size, time, feature, workers):
     h5files = get_all_files(folders)
-    random.shuffle(h5files)
+    # random.shuffle(h5files)
+
+    model = load_model(mdl)
 
     print('Building test generator...')
-    test_generator = DataGeneratorR(h5files, feature=feature, batch_size=batch_size, arrival_time=time, val_per=0,
-                                    shuffle=False)
+    test_generator = DataGeneratorR(h5files, feature=feature, batch_size=batch_size, arrival_time=time, shuffle=False)
     print('Number of test batches: ' + str(len(test_generator)))
 
-    predict = model.predict_generator(generator=test_generator, steps=None, max_queue_size=10, workers=workers,
-                                      use_multiprocessing=True, verbose=0)
+    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=workers,
+                                      use_multiprocessing=True, verbose=1)
 
-    gt_feature = np.array([])  # ground truth feature values
+    # retrieve ground truth
+    gt_feature = np.array([])
+    steps_done = 0
+    # steps = len(test_generator)
+    steps = 10
 
-    for i in range(0, len(test_generator)):
-        _, y = test_generator.__getitem__(i)
+    enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
+    enqueuer.start(workers=workers, max_queue_size=10)
+    output_generator = enqueuer.get()
+
+    progbar = Progbar(target=steps)
+
+    while steps_done < steps:
+        generator_output = next(output_generator)
+        _, y = generator_output
         gt_feature = np.append(gt_feature, y)
+        # print('steps_done', steps_done)
+        # print(y)
+        steps_done += 1
+        progbar.update(steps_done)
+
+    print('predict shape: ', predict.shape)
+    print('gt_feature shape: ', gt_feature.shape)
 
     df = pd.DataFrame()
+    pr_feature = predict
     df['GroundTruth'] = gt_feature
-    df['Predicted'] = predict
+    df['Predicted'] = pr_feature
 
-    res_file = model + '_test.pkl'
+    res_file = mdl + '_test.pkl'
 
     df.to_pickle(res_file)
 
-    print('Results saved in ' + FLAGS.model + '_test.pkl')
+    print('Results saved in ' + mdl + '_test.pkl')
 
     return res_file
 
