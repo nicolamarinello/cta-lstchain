@@ -21,14 +21,13 @@ def tester(folders, mdl, batch_size, time, feature, workers):
     test_generator = DataGeneratorR(h5files, feature=feature, batch_size=batch_size, arrival_time=time, shuffle=False)
     print('Number of test batches: ' + str(len(test_generator)))
 
-    predict = model.predict_generator(generator=test_generator, steps=10, max_queue_size=10, workers=workers,
+    predict = model.predict_generator(generator=test_generator, max_queue_size=10, workers=workers,
                                       use_multiprocessing=True, verbose=1)
 
     # retrieve ground truth
     gt_feature = np.array([])
     steps_done = 0
-    # steps = len(test_generator)
-    steps = 10
+    steps = len(test_generator)
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=workers, max_queue_size=10)
