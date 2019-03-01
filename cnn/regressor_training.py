@@ -272,14 +272,14 @@ if __name__ == "__main__":
 
     # reduce lr on plateau
     if lropf:
-        lrop = keras.callbacks.ReduceLROnPlateau(monitor='val_acc', factor=f_lrop, patience=p_lrop, verbose=1,
+        lrop = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=f_lrop, patience=p_lrop, verbose=1,
                                                  mode='auto',
                                                  min_delta=md_lrop, cooldown=cd_lrop, min_lr=mlr_lrop)
         callbacks.append(lrop)
 
     if es:
         # early stopping
-        early_stopping = EarlyStopping(monitor='val_acc', min_delta=md_es, patience=p_es, verbose=1, mode='max')
+        early_stopping = EarlyStopping(monitor='val_loss', min_delta=md_es, patience=p_es, verbose=1, mode='max')
         callbacks.append(early_stopping)
 
     # clr
@@ -303,21 +303,30 @@ if __name__ == "__main__":
 
         progbar = Progbar(target=steps)
 
-        X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
-        Y_val = np.array([])
+        # X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
+        # Y_val = np.array([])
+
+        X_val = []
+        Y_val = []
 
         while steps_done < steps:
             generator_output = next(output_generator)
             x, y = generator_output
-            X_val = np.append(X_val, x, axis=0)
-            Y_val = np.append(Y_val, y)
+            # X_val = np.append(X_val, x, axis=0)
+            # Y_val = np.append(Y_val, y)
+            X_val.append(x)
+            Y_val.append(y)
             steps_done += 1
             progbar.update(steps_done)
+
+        X_val = np.array(X_val).reshape(steps*batch_size, channels, img_rows, img_cols)
+        Y_val = np.array(Y_val).reshape(steps*batch_size)
 
         print('XVal shapes:', X_val.shape)
         print('YVal shapes:', Y_val.shape)
 
         model.fit_generator(generator=training_generator,
+                            validation_data=(X_val, Y_val),
                             steps_per_epoch=len(training_generator) * red,
                             validation_steps=len(validation_generator) * red,
                             epochs=epochs,
@@ -352,7 +361,7 @@ if __name__ == "__main__":
 
         if val:
             # get the best model on validation
-            val_loss = history.dic['val_loss']
+            val_loss = history.dic['val_losses']
             m = val_loss.index(min(val_loss))  # get the index with the highest accuracy
 
             model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if

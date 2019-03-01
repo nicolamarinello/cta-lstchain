@@ -344,16 +344,24 @@ if __name__ == "__main__":
 
         progbar = Progbar(target=steps)
 
-        X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
-        Y_val = np.array([])
+        # X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
+        # Y_val = np.array([])
+
+        X_val = []
+        Y_val = []
 
         while steps_done < steps:
             generator_output = next(output_generator)
             x, y = generator_output
-            X_val = np.append(X_val, x, axis=0)
-            Y_val = np.append(Y_val, y)
+            # X_val = np.append(X_val, x, axis=0)
+            # Y_val = np.append(Y_val, y)
+            X_val.append(x)
+            Y_val.append(y)
             steps_done += 1
             progbar.update(steps_done)
+
+        X_val = np.array(X_val).reshape(steps*batch_size, channels, img_rows, img_cols)
+        Y_val = np.array(Y_val).reshape(steps*batch_size)
 
         print('XVal shapes:', X_val.shape)
         print('YVal shapes:', Y_val.shape)

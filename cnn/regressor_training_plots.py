@@ -10,8 +10,8 @@ def train_plots(filen, tran):
 
     with open(filen, 'rb') as f:
         x = pickle.load(f)
-        losses = x['loss']
-        val_losses = x['val_loss']
+        losses = x['losses']
+        val_losses = x['val_losses']
 
     fig = plt.figure(figsize=(6, 6))
 

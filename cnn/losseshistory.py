@@ -79,5 +79,5 @@ class LossHistoryR(keras.callbacks.Callback):
 
     def on_train_end(self, logs=None):
 
-        self.dic['loss'] = self.losses
-        self.dic['val_loss'] = self.val_losses
+        self.dic['losses'] = self.losses
+        self.dic['val_losses'] = self.val_losses
