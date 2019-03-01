@@ -49,12 +49,12 @@ class DataGeneratorC(keras.utils.Sequence):
 
         filename = self.h5files[idx[0]]
 
-        h5f = h5py.File(filename, 'r')
-        image = h5f['LST/LST_image_charge'][idx[1]]
-        time = h5f['LST/LST_image_peak_times'][idx[1]]
-        lst_idx = h5f['LST/LST_event_index'][idx[1]]
-        mc_energy = h5f['Event_Info/ei_mc_energy'][:][lst_idx]
-        h5f.close()
+        data = np.load(filename)
+        image = data['LST_image_charge'][idx[1]]
+        time = data['LST_image_peak_times'][idx[1]]
+        lst_idx = data['LST_event_index'][idx[1]]
+        mc_energy = data['ei_mc_energy'][:][lst_idx]
+        data.close()
 
         gt = idx[2]
 
@@ -93,10 +93,9 @@ class DataGeneratorC(keras.utils.Sequence):
         idx = np.array([], dtype=np.int64).reshape(0, 3)
 
         for l, f in enumerate(h5files):
-            h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index'][1:]
-            h5f.close()
-            r = np.arange(len(lst_idx))
+            data = np.load(f)
+            r = np.arange(len(data['LST_event_index'])-1)
+            data.close()
 
             fn_basename = os.path.basename(os.path.normpath(f))
 
@@ -160,12 +159,12 @@ class DataGeneratorC(keras.utils.Sequence):
 
             filename = self.h5files[int(row[0])]
 
-            h5f = h5py.File(filename, 'r')
+            data = np.load(filename)
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, 0] = data['LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
-            h5f.close()
+                x[i, 1] = data['LST_image_peak_times_interp'][int(row[1])]
+            data.close()
             # Store class
             y[i] = row[2]
 
@@ -256,9 +255,10 @@ class DataGeneratorR(keras.utils.Sequence):
         idx = np.array([], dtype=np.int64).reshape(0, 3)
 
         for l, f in enumerate(h5files):
-            h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index'][1:]
-            h5f.close()
+
+            data = np.load(f)
+            lst_idx = np.arange(data['LST_event_index'][1:])
+            data.close()
 
             r = np.arange(len(lst_idx))
 
@@ -313,20 +313,20 @@ class DataGeneratorR(keras.utils.Sequence):
 
             filename = self.h5files[int(row[0])]
 
-            h5f = h5py.File(filename, 'r')
+            data = np.load(filename)
 
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, 0] = data['LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][row[1]]
+                x[i, 1] = data['LST_image_peak_times_interp'][row[1]]
 
             # Store features
             if self.feature == 'energy':
-                y[i] = h5f['Event_Info/ei_mc_energy'][:][int(row[2])]
+                y[i] = data['ei_mc_energy'][:][int(row[2])]
             elif self.feature == 'az':
-                y[i] = h5f['Event_Info/ei_az'][:][int(row[2])]
+                y[i] = data['ei_az'][:][int(row[2])]
 
-            h5f.close()
+            data.close()
 
         # x = x.reshape(x.shape[0], 1, 100, 100)
 
