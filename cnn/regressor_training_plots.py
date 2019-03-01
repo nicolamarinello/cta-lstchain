@@ -13,7 +13,7 @@ def train_plots(filen, tran):
         losses = x['loss']
         val_losses = x['val_loss']
 
-    fig = plt.figure(figsize=(10, 4))
+    fig = plt.figure(figsize=(6, 6))
 
     epochs = range(1, len(losses) + 1)
 
@@ -27,7 +27,7 @@ def train_plots(filen, tran):
 
     plt.savefig(folder + '/regressor_training.png', transparent=tran)
 
-    fig2 = plt.figure(figsize=(10, 4))
+    fig2 = plt.figure(figsize=(6, 6))
 
     epochs = range(1, len(val_losses) + 1)
 
@@ -41,7 +41,7 @@ def train_plots(filen, tran):
 
     plt.savefig(folder + '/regressor_validation.png', transparent=tran)
 
-    fig3 = plt.figure(figsize=(10, 4))
+    fig3 = plt.figure(figsize=(6, 6))
 
     epochs = range(1, len(val_losses) + 1)
 
@@ -53,7 +53,7 @@ def train_plots(filen, tran):
     plt.legend(loc='upper left', fancybox=True, framealpha=0.)
     plt.grid(True)
 
-    plt.suptitle('Validation history')
+    plt.suptitle('History')
 
     plt.savefig(folder + '/regressor_train_valid.png', transparent=tran)
 
