@@ -11,6 +11,8 @@ import keras
 import numpy as np
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.utils.data_utils import OrderedEnqueuer
+from keras.utils.generic_utils import Progbar
 
 from clr import OneCycleLR
 from generators import DataGeneratorR
@@ -109,7 +111,10 @@ if __name__ == "__main__":
     # reduction = int(len(h5files)*red)
     # h5files = h5files[:reduction]
     n_files = len(h5files)
-    val_per = 0.2
+    if val:
+        val_per = 0.2
+    else:
+        val_per = 0
     tv_idx = int(n_files * (1 - val_per))
     training_files = h5files[:tv_idx]
     validation_files = h5files[tv_idx:]
@@ -123,17 +128,19 @@ if __name__ == "__main__":
     training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, feature=feature,
                                         shuffle=shuffle)
 
-    print('Building validation generator...')
-    validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, feature=feature,
-                                          shuffle=False)
-
-    valid_idxs = training_generator.get_indexes()
-    valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
-    valid_protons = np.unique(valid_idxs[:, 2], return_counts=True)[1][0]
-
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
     train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
+
+    if val:
+        print('Building validation generator...')
+        validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time,
+                                              feature=feature,
+                                              shuffle=False)
+
+        valid_idxs = validation_generator.get_indexes()
+        valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
+        valid_protons = np.unique(valid_idxs[:, 2], return_counts=True)[1][0]
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
@@ -185,9 +192,11 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
     hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
     hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
-    hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
-    hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
-    hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
+
+    if val:
+        hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
+        hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
+        hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
@@ -227,7 +236,12 @@ if __name__ == "__main__":
         checkpoint = ModelCheckpoint(
             filepath=root_dir + '/' + model_name + '_{epoch:02d}_{loss:.5f}_{val_loss:.5f}.h5', monitor='val_loss',
             save_best_only=True)
-        callbacks.append(checkpoint)
+    else:
+        checkpoint = ModelCheckpoint(
+            filepath=root_dir + '/' + model_name + '_{epoch:02d}_{loss:.5f}.h5', monitor='loss',
+            save_best_only=True)
+
+    callbacks.append(checkpoint)
 
     # tensorboard = keras.callbacks.TensorBoard(log_dir=root_dir + "/logs",
     #                                          histogram_freq=5,
@@ -278,8 +292,32 @@ if __name__ == "__main__":
     model.compile(optimizer=optimizer, loss='mean_absolute_error')
 
     if val:
+
+        print('Getting validation data...')
+        steps_done = 0
+        steps = len(validation_generator)
+
+        enqueuer = OrderedEnqueuer(validation_generator, use_multiprocessing=True)
+        enqueuer.start(workers=workers, max_queue_size=10)
+        output_generator = enqueuer.get()
+
+        progbar = Progbar(target=steps)
+
+        X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
+        Y_val = np.array([])
+
+        while steps_done < steps:
+            generator_output = next(output_generator)
+            x, y = generator_output
+            X_val = np.append(X_val, x, axis=0)
+            Y_val = np.append(Y_val, y)
+            steps_done += 1
+            progbar.update(steps_done)
+
+        print('XVal shapes:', X_val.shape)
+        print('YVal shapes:', Y_val.shape)
+
         model.fit_generator(generator=training_generator,
-                            validation_data=validation_generator,
                             steps_per_epoch=len(training_generator) * red,
                             validation_steps=len(validation_generator) * red,
                             epochs=epochs,
@@ -310,18 +348,33 @@ if __name__ == "__main__":
     # training plots
     train_plots(train_history, False)
 
-    if val:
-        # get the best model on validation
-        val_loss = history.dic['val_loss']
-        m = val_loss.index(min(val_loss))  # get the index with the highest accuracy
+    if len(test_dirs) > 0:
 
-        model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
-                             (isfile(join(root_dir, f)) and f.startswith(
-                                 model_name + '_' + '{:02d}'.format(m + 1)))]
+        if val:
+            # get the best model on validation
+            val_loss = history.dic['val_loss']
+            m = val_loss.index(min(val_loss))  # get the index with the highest accuracy
 
-        best = model_checkpoints[0]
+            model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
+                                 (isfile(join(root_dir, f)) and f.startswith(
+                                     model_name + '_' + '{:02d}'.format(m + 1)))]
 
-        print('Best checkpoint: ', best)
+            best = model_checkpoints[0]
+
+            print('Best checkpoint: ', best)
+
+        else:
+            # get the best model on validation
+            acc = history.dic['loss']
+            m = acc.index(min(acc))  # get the index with the highest accuracy
+
+            model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
+                                 (isfile(join(root_dir, f)) and f.startswith(
+                                     model_name + '_' + '{:02d}'.format(m + 1)))]
+
+            best = model_checkpoints[0]
+
+            print('Best checkpoint: ', best)
 
         # test plots & results if test data is provided
         if len(test_dirs) > 0:

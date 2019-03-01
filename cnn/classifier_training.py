@@ -410,8 +410,6 @@ if __name__ == "__main__":
             acc = history.dic['accuracy']
             m = acc.index(max(acc))  # get the index with the highest accuracy
 
-            print('m: ', m)
-
             model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if
                                  (isfile(join(root_dir, f)) and f.startswith(
                                      model_name + '_' + '{:02d}'.format(m + 1)))]
