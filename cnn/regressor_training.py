@@ -326,4 +326,4 @@ if __name__ == "__main__":
         # test plots & results if test data is provided
         if len(test_dirs) > 0:
             pkl = tester(test_dirs, best, batch_size, time, feature, workers)
-            test_plots(pkl)
+            test_plots(pkl, feature)
