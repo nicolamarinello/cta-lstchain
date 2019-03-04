@@ -193,6 +193,8 @@ class DataGeneratorR(keras.utils.Sequence):
         self.generate_indexes()
         self.arrival_time = arrival_time
         self.on_epoch_end()
+        self.outcomes = 1
+        if feature == 'xy': self.outcomes += 1
         # self.test_mode = test_mode
         # self.feature_array = np.array([])
 
@@ -309,7 +311,7 @@ class DataGeneratorR(keras.utils.Sequence):
         'Generates data containing batch_size samples'
         # Initialization
         x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
-        y = np.empty([self.batch_size], dtype=float)
+        y = np.empty([self.batch_size, self.outcomes], dtype=float)
 
         # Generate data
         for i, row in enumerate(indexes):
@@ -327,8 +329,8 @@ class DataGeneratorR(keras.utils.Sequence):
             if self.feature == 'energy':
                 y[i] = np.log10(h5f['Event_Info/ei_mc_energy'][:][int(row[2])])
             elif self.feature == 'xy':
-                y[i] = np.array(h5f['Event_Info/ei_core_x'][:][int(row[2])],
-                                h5f['Event_Info/ei_core_y'][:][int(row[2])])
+                y[i, 0] = h5f['Event_Info/ei_core_x'][:][int(row[2])]
+                y[i, 1] = h5f['Event_Info/ei_core_y'][:][int(row[2])]
 
             h5f.close()
 
