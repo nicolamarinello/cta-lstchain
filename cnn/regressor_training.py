@@ -195,8 +195,12 @@ if __name__ == "__main__":
 
     if val:
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
-        hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
-        hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
+        # hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
+        # hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
+
+    outcomes = 1
+    if feature == 'xy':
+        outcomes = 2
 
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
@@ -207,7 +211,7 @@ if __name__ == "__main__":
     elif model_name == 'ResNetF':
         wd = 1e-5
         hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetF(channels, img_rows, img_cols, wd)
+        resnet = ResNetF(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
     else:
         print('Model name not valid')
@@ -374,7 +378,7 @@ if __name__ == "__main__":
 
         else:
             # get the best model on validation
-            acc = history.dic['loss']
+            acc = history.dic['losses']
             m = acc.index(min(acc))  # get the index with the highest accuracy
 
             model_checkpoints = [join(root_dir, f) for f in listdir(root_dir) if

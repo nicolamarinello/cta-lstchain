@@ -25,6 +25,7 @@ def tester(folders, mdl, batch_size, time, feature, workers):
                                       use_multiprocessing=True, verbose=1)
 
     # retrieve ground truth
+    print('Retrieving ground truth...')
     gt_feature = np.array([])
     steps_done = 0
     steps = len(test_generator)

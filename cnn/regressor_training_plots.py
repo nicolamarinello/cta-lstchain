@@ -19,7 +19,7 @@ def train_plots(filen, tran):
 
     plt.plot(epochs, losses)
     plt.xlabel('Epoch')
-    plt.ylabel('Loss [binary_crossentropy]')
+    plt.ylabel('Loss [mean_absolute_error]')
     plt.title('Training loss')
     plt.grid(True)
 
@@ -33,7 +33,7 @@ def train_plots(filen, tran):
 
     plt.plot(epochs, val_losses)
     plt.xlabel('Epoch')
-    plt.ylabel('Loss [binary_crossentropy]')
+    plt.ylabel('Loss [mean_absolute_error]')
     plt.title('Validation loss')
     plt.grid(True)
 
@@ -48,7 +48,7 @@ def train_plots(filen, tran):
     plt.plot(epochs, losses, label='loss')
     plt.plot(epochs, val_losses, label='val_loss')
     plt.xlabel('Epoch')
-    plt.ylabel('Loss [binary_crossentropy]')
+    plt.ylabel('Loss [mean_absolute_error]')
     plt.title('Validation loss')
     plt.legend(loc='upper left', fancybox=True, framealpha=0.)
     plt.grid(True)

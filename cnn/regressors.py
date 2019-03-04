@@ -75,12 +75,13 @@ class RegressorV3:
 
 class ResNetF:
 
-    def __init__(self, channels, img_rows, img_cols, wd):
+    def __init__(self, outcomes, channels, img_rows, img_cols, wd):
 
         self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.wd = wd
+        self.outcomes = outcomes
 
     def get_model(self):
 
@@ -213,7 +214,7 @@ class ResNetF:
 
         x = AveragePooling2D(pool_size=2, data_format='channels_first')(y)
         y = Flatten()(x)
-        outputs = Dense(1, activation='linear', kernel_initializer='he_normal')(y)
+        outputs = Dense(self.outcomes, activation='linear', kernel_initializer='he_normal')(y)
         model = Model(inputs=inputs, outputs=outputs)
 
         return model

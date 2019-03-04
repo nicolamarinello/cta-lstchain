@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy
 import scipy.stats
 from matplotlib import gridspec
 from matplotlib.pyplot import figure
@@ -14,9 +15,17 @@ def test_plots(pkl, feature):
     folder = os.path.dirname(pkl)
     df = pd.read_pickle(pkl)
 
-    print(df)
+    # print(df)
 
     if feature == 'energy':
+
+        # print(df)
+
+        # remove pairs gt - predicted where predicted is 0
+        # df = df[df['Predicted'] > 0]
+        # df = df[df.Predicted > 0]
+
+        # print(df)
 
         figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
 
@@ -38,6 +47,8 @@ def test_plots(pkl, feature):
         plt.colorbar(hE[3])
         plt.xlabel('$log_{10}E_{gammas}$', fontsize=15)
         plt.ylabel('$log_{10}E_{rec}$', fontsize=15)
+        # plt.xlim(0, 10)
+        # plt.ylim(0, 10)
         plt.plot(df['GroundTruth'], df['GroundTruth'], "-", color='red')
 
         # Plot a profile
@@ -71,9 +82,7 @@ def test_plots(pkl, feature):
 
         print('Plot done')
 
-    elif feature == 'az':
-
-        """
+    elif feature == 'xy':
 
         plt.subplot(221)
         difD = ((gammas['disp_norm'] - gammas['disp_rec']) / gammas['disp_norm'])
@@ -100,7 +109,6 @@ def test_plots(pkl, feature):
         plt.xlabel(r'$\theta^{2}(º)$', fontsize=15)
         plt.ylabel(r'# of events', fontsize=15)
 
-        """
 
 
 if __name__ == "__main__":

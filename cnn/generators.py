@@ -1,13 +1,15 @@
-import keras
-import numpy as np
-import h5py
 import multiprocessing
 # import threading
 import os
 
+import h5py
+import keras
+import numpy as np
+
 
 class DataGeneratorC(keras.utils.Sequence):
     'Generates data for Keras'
+
     def __init__(self, h5files, batch_size=32, arrival_time=False, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
@@ -20,7 +22,7 @@ class DataGeneratorC(keras.utils.Sequence):
     def __len__(self):
         'Denotes the number of batches per epoch'
         # total number of images in the dataset
-        return int(np.floor(self.indexes.shape[0]/self.batch_size))
+        return int(np.floor(self.indexes.shape[0] / self.batch_size))
 
     def __getitem__(self, index):
 
@@ -43,7 +45,7 @@ class DataGeneratorC(keras.utils.Sequence):
         return x, y
 
     def get_indexes(self):
-        return self.indexes[0:self.__len__()*self.batch_size]
+        return self.indexes[0:self.__len__() * self.batch_size]
 
     def get_event(self, idx):
 
@@ -143,12 +145,12 @@ class DataGeneratorC(keras.utils.Sequence):
     def on_epoch_end(self):
         'Updates indexes after each epoch'
         if self.shuffle:
-            np.random.shuffle(self.indexes)     # shuffle all the pairs (if, ii) - (index file, index image in the file)
+            np.random.shuffle(self.indexes)  # shuffle all the pairs (if, ii) - (index file, index image in the file)
 
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, self.arrival_time+1, 100, 100])
+        x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
         y = np.empty([self.batch_size], dtype=int)
 
         # print('__data_generation', indexes)
@@ -181,6 +183,7 @@ class DataGeneratorC(keras.utils.Sequence):
 
 class DataGeneratorR(keras.utils.Sequence):
     'Generates data for Keras'
+
     def __init__(self, h5files, feature, batch_size=32, arrival_time=False, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
@@ -196,7 +199,7 @@ class DataGeneratorR(keras.utils.Sequence):
     def __len__(self):
         'Denotes the number of batches per epoch'
         # total number of images in the dataset
-        return int(np.floor(self.indexes.shape[0]/self.batch_size))
+        return int(np.floor(self.indexes.shape[0] / self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -300,12 +303,12 @@ class DataGeneratorR(keras.utils.Sequence):
     def on_epoch_end(self):
         'Updates indexes after each epoch'
         if self.shuffle:
-            np.random.shuffle(self.indexes)     # shuffle all the pairs (if, ii) - (index file, index image in the file)
+            np.random.shuffle(self.indexes)  # shuffle all the pairs (if, ii) - (index file, index image in the file)
 
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, self.arrival_time+1, 100, 100])
+        x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
         y = np.empty([self.batch_size], dtype=float)
 
         # Generate data
@@ -322,9 +325,10 @@ class DataGeneratorR(keras.utils.Sequence):
 
             # Store features
             if self.feature == 'energy':
-                y[i] = h5f['Event_Info/ei_mc_energy'][:][int(row[2])]
-            elif self.feature == 'az':
-                y[i] = h5f['Event_Info/ei_az'][:][int(row[2])]
+                y[i] = np.log10(h5f['Event_Info/ei_mc_energy'][:][int(row[2])])
+            elif self.feature == 'xy':
+                y[i] = np.array(h5f['Event_Info/ei_core_x'][:][int(row[2])],
+                                h5f['Event_Info/ei_core_y'][:][int(row[2])])
 
             h5f.close()
 

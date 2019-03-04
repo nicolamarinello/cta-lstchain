@@ -154,10 +154,10 @@ def func(paths, format, ro, rc, rn):
                 # data_file.create_dataset(
                 #    'Event_Info/ei_alt', data=np.array(ei_alt))
                 data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_core_x', data=np.array(ei_core_x))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_core_y', data=np.array(ei_core_y))
+                data_file.create_dataset(
+                    'Event_Info/ei_core_x', data=np.array(ei_core_x))
+                data_file.create_dataset(
+                    'Event_Info/ei_core_y', data=np.array(ei_core_y))
                 # data_file.create_dataset(
                 #    'Event_Info/ei_event_number', data=np.array(ei_event_number))
                 # data_file.create_dataset(
