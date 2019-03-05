@@ -7,7 +7,6 @@ import pandas as pd
 import scipy
 import scipy.stats
 from matplotlib import gridspec
-from matplotlib.pyplot import figure
 from scipy.stats import norm
 
 
@@ -19,40 +18,40 @@ def test_plots(pkl, feature):
 
     if feature == 'energy':
 
-        # print(df)
-
-        # remove pairs gt - predicted where predicted is 0
-        # df = df[df['Predicted'] > 0]
-        # df = df[df.Predicted > 0]
-
-        # print(df)
-
-        figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
+        # fig = figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
 
         # histogram
-        plt.subplot(221)
+        fig = plt.figure()
         difE = ((df['GroundTruth'] - df['Predicted']) * np.log(10))
         section = difE[abs(difE) < 1.5]
         mu, sigma = norm.fit(section)
-        print(mu, sigma)
         n, bins, patches = plt.hist(difE, 100, density=1, alpha=0.75)
         y = norm.pdf(bins, mu, sigma)
         plt.plot(bins, y, 'r--', linewidth=2)
-        plt.xlabel('$(log_{10}(E_{gammas})-log_{10}(E_{rec}))*log_{N}(10)$', fontsize=10)
+        plt.xlabel('$(log_{10}(E_{gammas}[TeV])-log_{10}(E_{rec}[TeV]))*log_{N}(10)$', fontsize=10)
         plt.figtext(0.15, 0.7, 'Mean: ' + str(round(mu, 4)), fontsize=10)
         plt.figtext(0.15, 0.65, 'Std: ' + str(round(sigma, 4)), fontsize=10)
 
-        plt.subplot(222)
+        plt.title('Histogram - Energy reconstruction')
+
+        plt.savefig(folder + '/histogram.png', format='png', transparent=False)
+
+        fig = plt.figure()
         hE = plt.hist2d(df['GroundTruth'], df['Predicted'], bins=100)
         plt.colorbar(hE[3])
-        plt.xlabel('$log_{10}E_{gammas}$', fontsize=15)
-        plt.ylabel('$log_{10}E_{rec}$', fontsize=15)
-        # plt.xlim(0, 10)
-        # plt.ylim(0, 10)
+        plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
+        plt.ylabel('$log_{10}E_{rec}[TeV]$', fontsize=15)
         plt.plot(df['GroundTruth'], df['GroundTruth'], "-", color='red')
 
+        plt.title('Histogram2D - Energy reconstruction')
+
+        plt.savefig(folder + '/histogram2d.png', format='png', transparent=False)
+
+
+        """
         # Plot a profile
-        subplot = plt.subplot(223)
+        fig = plt.figure()
+        # subplot = plt.subplot(223)
         means_result = scipy.stats.binned_statistic(df['GroundTruth'], [difE, difE ** 2], bins=50, range=(1, 6),
                                                     statistic='mean')
         means, means2 = means_result.statistic
@@ -60,8 +59,8 @@ def test_plots(pkl, feature):
         bin_edges = means_result.bin_edges
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 
-        # fig = plt.figure()
-        gs = gridspec.GridSpecFromSubplotSpec(2, 1, height_ratios=[2, 1], subplot_spec=subplot)
+        #
+        gs = gridspec.GridSpecFromSubplotSpec(2, 1, height_ratios=[2, 1], subplot_spec=fig)
         ax0 = plt.subplot(gs[0])
         plot0 = ax0.errorbar(x=bin_centers, y=means, yerr=standard_deviations, linestyle='none', marker='.')
         plt.ylabel('$(log_{10}(E_{true})-log_{10}(E_{rec}))*log_{N}(10)$', fontsize=10)
@@ -74,16 +73,25 @@ def test_plots(pkl, feature):
         plt.ylabel("Std", fontsize=10)
         plt.xlabel('$log_{10}E_{true}$', fontsize=10)
 
-        # plt.subplots_adjust(hspace=0.5)
+        plt.savefig(folder + '/profile.eps', format='eps', transparent=False)
 
-        plt.savefig(folder + '/energy_perf.png', transparent=False)
-
-        # plt.show()
+        """
 
         print('Plot done')
 
     elif feature == 'xy':
 
+        fig = plt.figure()
+        theta2 = (df['src_x'] - df['src_x_rec']) ** 2 + (df['src_y'] - df['src_y']) ** 2
+        plt.hist(theta2, bins=100, range=[0, 0.1], histtype=u'step')
+        plt.xlabel(r'$\theta^{2}(º)$', fontsize=15)
+        plt.ylabel(r'# of events', fontsize=15)
+
+        plt.title('Histogram - Direction reconstruction')
+
+        plt.savefig(folder + '/histogram.png', format='png', transparent=False)
+
+        """
         plt.subplot(221)
         difD = ((gammas['disp_norm'] - gammas['disp_rec']) / gammas['disp_norm'])
         section = difD[abs(difD) < 0.5]
@@ -103,12 +111,7 @@ def test_plots(pkl, feature):
         plt.ylabel('$disp\_norm_{rec}$', fontsize=15)
         plt.plot(gammas['disp_norm'], gammas['disp_norm'], "-", color='red')
 
-        plt.subplot(223)
-        theta2 = (gammas['src_x'] - gammas['src_x_rec']) ** 2 + (gammas['src_y'] - gammas['src_y']) ** 2
-        plt.hist(theta2, bins=100, range=[0, 0.1], histtype=u'step')
-        plt.xlabel(r'$\theta^{2}(º)$', fontsize=15)
-        plt.ylabel(r'# of events', fontsize=15)
-
+        """
 
 
 if __name__ == "__main__":

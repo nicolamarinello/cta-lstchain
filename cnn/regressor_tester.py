@@ -49,9 +49,20 @@ def tester(folders, mdl, batch_size, time, feature, workers):
     print('gt_feature shape: ', gt_feature.shape)
 
     df = pd.DataFrame()
-    pr_feature = predict
-    df['GroundTruth'] = gt_feature
-    df['Predicted'] = pr_feature
+
+    if feature == 'energy':
+
+        pr_feature = predict
+        df['GroundTruth'] = gt_feature
+        df['Predicted'] = pr_feature
+
+    elif feature == 'xy':
+
+        pr_feature = predict
+        df['src_x'] = gt_feature[:, 0]
+        df['src_y'] = gt_feature[:, 1]
+        df['src_x_rec'] = pr_feature[:, 0]
+        df['src_y_rec'] = pr_feature[:, 1]
 
     res_file = mdl + '_test.pkl'
 
