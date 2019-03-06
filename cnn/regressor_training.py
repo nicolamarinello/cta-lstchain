@@ -323,8 +323,12 @@ if __name__ == "__main__":
             steps_done += 1
             progbar.update(steps_done)
 
-        X_val = np.array(X_val).reshape(steps*batch_size, channels, img_rows, img_cols)
-        Y_val = np.array(Y_val).reshape(steps*batch_size)
+        X_val = np.array(X_val).reshape(steps * batch_size, channels, img_rows, img_cols)
+
+        if feature == 'energy':
+            Y_val = np.array(Y_val).reshape(steps*batch_size)
+        elif feature == 'xy':
+            Y_val = np.array(Y_val).reshape(steps*batch_size, 2)
 
         print('XVal shapes:', X_val.shape)
         print('YVal shapes:', Y_val.shape)

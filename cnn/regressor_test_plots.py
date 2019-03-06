@@ -22,6 +22,8 @@ def test_plots(pkl, feature):
         n_figs = n_rows * n_cols
 
         edges = np.linspace(min(df['GroundTruth']), max(df['GroundTruth']), n_figs + 1)
+        mus = np.array([])
+        sigmas = np.array([])
 
         print('Edges: ', edges)
 
@@ -40,6 +42,8 @@ def test_plots(pkl, feature):
                 difE = ((dfbe['GroundTruth'] - dfbe['Predicted']) * np.log(10))
                 section = difE[abs(difE) < 1.5]
                 mu, sigma = norm.fit(section)
+                mus = np.append(mus, mu)
+                sigmas = np.append(sigmas, sigma)
                 n, bins, patches = plt.hist(difE, 100, density=1, alpha=0.75)
                 y = norm.pdf(bins, mu, sigma)
                 plt.plot(bins, y, 'r--', linewidth=2)
@@ -65,6 +69,24 @@ def test_plots(pkl, feature):
         plt.title('Histogram2D - Energy reconstruction')
 
         plt.savefig(folder + '/histogram2d.png', format='png', transparent=False)
+
+        fig = plt.figure()
+
+        # back to linear
+        edges = np.power(10, edges)
+
+        bin_centers = (edges[:-1] + edges[1:]) / 2
+        bin_size = edges[1:] - edges[:-1]
+        # bin_size_l = bin_centers - edges[:-1]
+        # bin_size_r = edges[1:] - bin_centers
+        plt.errorbar(x=bin_centers, y=mus, xerr=bin_size/2, yerr=sigmas/2, linestyle='none', marker='o')
+        plt.ylabel(r'$\Delta E$', fontsize=15)
+        plt.xlabel('$Energy [TeV]$', fontsize=15)
+        plt.xscale('log', basex=10)
+
+        plt.title('Energy resolution')
+        plt.savefig(folder + '/energy_res.png', format='png', transparent=False)
+
 
         """
         # Plot a profile
