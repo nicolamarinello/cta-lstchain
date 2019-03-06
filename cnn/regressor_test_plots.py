@@ -15,8 +15,6 @@ def test_plots(pkl, feature):
 
     if feature == 'energy':
 
-        # fig = figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
-
         n_rows = 4  # how many rows figures
         n_cols = 3  # how many cols figures
         n_figs = n_rows * n_cols
@@ -25,17 +23,19 @@ def test_plots(pkl, feature):
         mus = np.array([])
         sigmas = np.array([])
 
-        print('Edges: ', edges)
+        # print('Edges: ', edges)
 
         fig = plt.figure(figsize=(30, 30))
+
+        plt.suptitle('Histograms - Energy reconstruction', fontsize=35)
 
         for i in range(n_rows):
             for j in range(n_cols):
                 # df with ground truth between edges
                 edge1 = edges[i * (n_rows - 1) + j]
                 edge2 = edges[i * (n_rows - 1) + j + 1]
-                print('\nEdge1: ', edge1, ' Idxs: ', i * (n_rows - 1) + j)
-                print('Edge2: ', edge2, ' Idxs: ', i * (n_rows - 1) + j + 1)
+                # print('\nEdge1: ', edge1, ' Idxs: ', i * (n_rows - 1) + j)
+                # print('Edge2: ', edge2, ' Idxs: ', i * (n_rows - 1) + j + 1)
                 dfbe = df[(df['GroundTruth'] >= edge1) & (df['GroundTruth'] < edge2)]
                 # histogram
                 subplot = plt.subplot(n_rows, n_cols, i * (n_rows - 1) + j + 1)
@@ -54,8 +54,7 @@ def test_plots(pkl, feature):
                     round(edge2, 3)) + ' [log(E [TeV])]' + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(
                     round(sigma, 3)))
 
-        plt.suptitle('Histogram - Energy reconstruction', fontsize=25)
-
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.savefig(folder + '/histograms.png', format='png', transparent=False)
 
         fig = plt.figure()
@@ -73,20 +72,18 @@ def test_plots(pkl, feature):
         fig = plt.figure()
 
         # back to linear
-        # edges = np.power(10, edges)
-
+        edges = np.power(10, edges)
         bin_centers = (edges[:-1] + edges[1:]) / 2
-        bin_size = edges[1:] - edges[:-1]
-        # bin_size_l = bin_centers - edges[:-1]
-        # bin_size_r = edges[1:] - bin_centers
-        plt.errorbar(x=bin_centers, y=mus, xerr=bin_size/2, yerr=sigmas/2, linestyle='none', marker='o')
-        plt.ylabel(r'$\Delta E$', fontsize=15)
-        plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
-        # plt.xscale('log', basex=10)
 
+        plt.semilogx(bin_centers, mus, label='Mean')
+        plt.semilogx(bin_centers, sigmas, label='Std')
+        plt.grid(which='major')
+        plt.legend()
+        plt.ylabel(r'$\Delta E, \sigma$', fontsize=15)
+        plt.xlabel('$E_{gammas}[TeV]$', fontsize=15)
         plt.title('Energy resolution')
+        fig.tight_layout()
         plt.savefig(folder + '/energy_res.png', format='png', transparent=False)
-
 
         """
         # Plot a profile
