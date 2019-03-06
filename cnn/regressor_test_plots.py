@@ -73,7 +73,7 @@ def test_plots(pkl, feature):
         fig = plt.figure()
 
         # back to linear
-        edges = np.power(10, edges)
+        # edges = np.power(10, edges)
 
         bin_centers = (edges[:-1] + edges[1:]) / 2
         bin_size = edges[1:] - edges[:-1]
@@ -81,8 +81,8 @@ def test_plots(pkl, feature):
         # bin_size_r = edges[1:] - bin_centers
         plt.errorbar(x=bin_centers, y=mus, xerr=bin_size/2, yerr=sigmas/2, linestyle='none', marker='o')
         plt.ylabel(r'$\Delta E$', fontsize=15)
-        plt.xlabel('$Energy [TeV]$', fontsize=15)
-        plt.xscale('log', basex=10)
+        plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
+        # plt.xscale('log', basex=10)
 
         plt.title('Energy resolution')
         plt.savefig(folder + '/energy_res.png', format='png', transparent=False)
