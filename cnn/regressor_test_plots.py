@@ -4,9 +4,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
-import scipy.stats
-from matplotlib import gridspec
 from scipy.stats import norm
 
 
@@ -20,23 +17,45 @@ def test_plots(pkl, feature):
 
         # fig = figure(num=None, figsize=(12, 10), dpi=80, facecolor='w', edgecolor='k')
 
-        # histogram
+        n_rows = 4  # how many rows figures
+        n_cols = 3  # how many cols figures
+        n_figs = n_rows * n_cols
+
+        edges = np.linspace(min(df['GroundTruth']), max(df['GroundTruth']), n_figs + 1)
+
+        print('Edges: ', edges)
+
+        fig = plt.figure(figsize=(30, 30))
+
+        for i in range(n_rows):
+            for j in range(n_cols):
+                # df with ground truth between edges
+                edge1 = edges[i * (n_rows - 1) + j]
+                edge2 = edges[i * (n_rows - 1) + j + 1]
+                print('\nEdge1: ', edge1, ' Idxs: ', i * (n_rows - 1) + j)
+                print('Edge2: ', edge2, ' Idxs: ', i * (n_rows - 1) + j + 1)
+                dfbe = df[(df['GroundTruth'] >= edge1) & (df['GroundTruth'] < edge2)]
+                # histogram
+                subplot = plt.subplot(n_rows, n_cols, i * (n_rows - 1) + j + 1)
+                difE = ((dfbe['GroundTruth'] - dfbe['Predicted']) * np.log(10))
+                section = difE[abs(difE) < 1.5]
+                mu, sigma = norm.fit(section)
+                n, bins, patches = plt.hist(difE, 100, density=1, alpha=0.75)
+                y = norm.pdf(bins, mu, sigma)
+                plt.plot(bins, y, 'r--', linewidth=2)
+                plt.xlabel('$(log_{10}(E_{gammas}[TeV])-log_{10}(E_{rec}[TeV]))*log_{N}(10)$', fontsize=10)
+                # plt.figtext(0.15, 0.9, 'Mean: ' + str(round(mu, 4)), fontsize=10)
+                # plt.figtext(0.15, 0.85, 'Std: ' + str(round(sigma, 4)), fontsize=10)
+                plt.title('Energy between ' + str(round(edge1, 3)) + ' [log(E [TeV])] & ' + str(
+                    round(edge2, 3)) + ' [log(E [TeV])]' + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(
+                    round(sigma, 3)))
+
+        plt.suptitle('Histogram - Energy reconstruction', fontsize=25)
+
+        plt.savefig(folder + '/histograms.png', format='png', transparent=False)
+
         fig = plt.figure()
-        difE = ((df['GroundTruth'] - df['Predicted']) * np.log(10))
-        section = difE[abs(difE) < 1.5]
-        mu, sigma = norm.fit(section)
-        n, bins, patches = plt.hist(difE, 100, density=1, alpha=0.75)
-        y = norm.pdf(bins, mu, sigma)
-        plt.plot(bins, y, 'r--', linewidth=2)
-        plt.xlabel('$(log_{10}(E_{gammas}[TeV])-log_{10}(E_{rec}[TeV]))*log_{N}(10)$', fontsize=10)
-        plt.figtext(0.15, 0.7, 'Mean: ' + str(round(mu, 4)), fontsize=10)
-        plt.figtext(0.15, 0.65, 'Std: ' + str(round(sigma, 4)), fontsize=10)
 
-        plt.title('Histogram - Energy reconstruction')
-
-        plt.savefig(folder + '/histogram.png', format='png', transparent=False)
-
-        fig = plt.figure()
         hE = plt.hist2d(df['GroundTruth'], df['Predicted'], bins=100)
         plt.colorbar(hE[3])
         plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
@@ -46,7 +65,6 @@ def test_plots(pkl, feature):
         plt.title('Histogram2D - Energy reconstruction')
 
         plt.savefig(folder + '/histogram2d.png', format='png', transparent=False)
-
 
         """
         # Plot a profile
