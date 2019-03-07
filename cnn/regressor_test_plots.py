@@ -15,8 +15,8 @@ def test_plots(pkl, feature):
 
     if feature == 'energy':
 
-        n_rows = 4  # how many rows figures
-        n_cols = 3  # how many cols figures
+        n_rows = 6  # how many rows figures
+        n_cols = 2  # how many cols figures
         n_figs = n_rows * n_cols
 
         edges = np.linspace(min(df['GroundTruth']), max(df['GroundTruth']), n_figs + 1)
@@ -25,20 +25,20 @@ def test_plots(pkl, feature):
 
         # print('Edges: ', edges)
 
-        fig = plt.figure(figsize=(30, 30))
+        fig = plt.figure(figsize=(13, 30))
 
-        plt.suptitle('Histograms - Energy reconstruction', fontsize=35)
+        plt.suptitle('Histograms - Energy reconstruction', fontsize=30)
 
         for i in range(n_rows):
             for j in range(n_cols):
                 # df with ground truth between edges
-                edge1 = edges[i * (n_rows - 1) + j]
-                edge2 = edges[i * (n_rows - 1) + j + 1]
-                # print('\nEdge1: ', edge1, ' Idxs: ', i * (n_rows - 1) + j)
-                # print('Edge2: ', edge2, ' Idxs: ', i * (n_rows - 1) + j + 1)
+                edge1 = edges[n_cols * i + j]
+                edge2 = edges[n_cols * i + j + 1]
+                # print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
+                # print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
                 dfbe = df[(df['GroundTruth'] >= edge1) & (df['GroundTruth'] < edge2)]
                 # histogram
-                subplot = plt.subplot(n_rows, n_cols, i * (n_rows - 1) + j + 1)
+                subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
                 difE = ((dfbe['GroundTruth'] - dfbe['Predicted']) * np.log(10))
                 section = difE[abs(difE) < 1.5]
                 mu, sigma = norm.fit(section)
@@ -50,8 +50,8 @@ def test_plots(pkl, feature):
                 plt.xlabel('$(log_{10}(E_{gammas}[TeV])-log_{10}(E_{rec}[TeV]))*log_{N}(10)$', fontsize=10)
                 # plt.figtext(0.15, 0.9, 'Mean: ' + str(round(mu, 4)), fontsize=10)
                 # plt.figtext(0.15, 0.85, 'Std: ' + str(round(sigma, 4)), fontsize=10)
-                plt.title('Energy between ' + str(round(edge1, 3)) + ' [log(E [TeV])] & ' + str(
-                    round(edge2, 3)) + ' [log(E [TeV])]' + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(
+                plt.title('Energy [' + str(round(edge1, 3)) + ', ' + str(
+                    round(edge2, 3)) + '] $log_{10}(E_{gammas}[TeV])$' + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(
                     round(sigma, 3)))
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
