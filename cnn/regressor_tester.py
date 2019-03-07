@@ -1,5 +1,4 @@
 import argparse
-import random
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,7 @@ def tester(folders, mdl, batch_size, time, feature, workers):
 
     # retrieve ground truth
     print('Retrieving ground truth...')
-    gt_feature = np.array([])
+    gt_feature = []
     steps_done = 0
     steps = len(test_generator)
 
@@ -39,30 +38,67 @@ def tester(folders, mdl, batch_size, time, feature, workers):
     while steps_done < steps:
         generator_output = next(output_generator)
         _, y = generator_output
-        gt_feature = np.append(gt_feature, y)
+        gt_feature.append(y)
         # print('steps_done', steps_done)
         # print(y)
         steps_done += 1
         progbar.update(steps_done)
-
-    print('predict shape: ', predict.shape)
-    print('gt_feature shape: ', gt_feature.shape)
 
     df = pd.DataFrame()
 
     if feature == 'energy':
 
         pr_feature = predict
+        gt_feature = np.array(gt_feature).reshape(steps * batch_size)
+
+        print('predict shape: ', predict.shape)
+        print('gt_feature shape: ', gt_feature.shape)
+
         df['GroundTruth'] = gt_feature
         df['Predicted'] = pr_feature
 
     elif feature == 'xy':
 
         pr_feature = predict
+        gt_feature = np.array(gt_feature).reshape(steps * batch_size, 2)
+
+        print('predict shape: ', predict.shape)
+        print('gt_feature shape: ', gt_feature.shape)
+
         df['src_x'] = gt_feature[:, 0]
         df['src_y'] = gt_feature[:, 1]
         df['src_x_rec'] = pr_feature[:, 0]
         df['src_y_rec'] = pr_feature[:, 1]
+
+        print('Building generator for energy...')
+        energy_generator = DataGeneratorR(h5files, feature='energy', batch_size=batch_size, arrival_time=time,
+                                          shuffle=False)
+
+        # retrieve ground truth
+        print('Retrieving ground truth...')
+        gt_energy = []
+        steps_done = 0
+        steps = len(energy_generator)
+
+        enqueuer = OrderedEnqueuer(energy_generator, use_multiprocessing=True)
+        enqueuer.start(workers=workers, max_queue_size=10)
+        output_generator = enqueuer.get()
+
+        progbar = Progbar(target=steps)
+
+        while steps_done < steps:
+            generator_output = next(output_generator)
+            _, y = generator_output
+            gt_energy.append(y)
+            # print('steps_done', steps_done)
+            # print(y)
+            steps_done += 1
+            progbar.update(steps_done)
+
+        gt_energy = np.array(gt_energy).reshape(steps * batch_size)
+        df['energy'] = gt_energy
+
+        print('gt_energy shape: ', gt_energy.shape)
 
     res_file = mdl + '_test.pkl'
 
