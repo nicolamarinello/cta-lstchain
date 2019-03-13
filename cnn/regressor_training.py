@@ -20,7 +20,7 @@ from losseshistory import LossHistoryR
 from regressor_test_plots import test_plots
 from regressor_tester import tester
 from regressor_training_plots import train_plots
-from regressors import RegressorV2, RegressorV3, ResNetF
+from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -82,8 +82,8 @@ if __name__ == "__main__":
         channels = 2
 
     # early stopping
-    md_es = 0.01  # min delta
-    p_es = 25  # patience
+    md_es = 0.1  # min delta
+    p_es = 50  # patience
 
     # sgd
     lr = 0.01  # lr
@@ -212,6 +212,21 @@ if __name__ == "__main__":
         wd = 1e-5
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetF(outcomes, channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+    elif model_name == 'ResNetH':
+        wd = 0
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetH(outcomes, channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+    elif model_name == 'ResNetXt':
+        cardinality = 32
+        hype_print += '\n' + 'Cardinality: ' + str(cardinality)
+        resnet = ResNetXt(outcomes, channels, img_rows, img_cols)
+        model = resnet.get_model(cardinality=cardinality)
+    elif model_name == 'ResNetI':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetI(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
     else:
         print('Model name not valid')

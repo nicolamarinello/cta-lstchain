@@ -96,7 +96,7 @@ class DataGeneratorC(keras.utils.Sequence):
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index'][1:]
+            lst_idx = h5f['LST/LST_event_index']
             h5f.close()
             r = np.arange(len(lst_idx))
 
@@ -262,7 +262,7 @@ class DataGeneratorR(keras.utils.Sequence):
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index'][1:]
+            lst_idx = h5f['LST/LST_event_index']
             h5f.close()
 
             r = np.arange(len(lst_idx))

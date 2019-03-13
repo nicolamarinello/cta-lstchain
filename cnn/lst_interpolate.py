@@ -79,7 +79,9 @@ def func(paths, format, ro, rc, rn):
             _, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z = get_array_data(
                 data_p)
 
+            LST_event_index = LST_event_index[1:]
             LST_image_charge = LST_image_charge[1:]
+            LST_image_peak_times = LST_image_peak_times[1:]
 
             # get camera geometry & camera pixels coordinates
             camera = CameraGeometry.from_name("LSTCam")

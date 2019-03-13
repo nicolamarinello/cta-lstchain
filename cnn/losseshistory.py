@@ -62,6 +62,7 @@ class LossHistoryR(keras.callbacks.Callback):
         object.__init__(self)
         self.losses = []
         self.val_losses = []
+        self.lrs = []
         self.dic = {}
 
     def on_train_begin(self, logs={}):
@@ -76,8 +77,10 @@ class LossHistoryR(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         self.losses.append(logs.get('loss'))
         self.val_losses.append(logs.get('val_loss'))
+        self.lrs.append(K.eval(self.model.optimizer.lr))
 
     def on_train_end(self, logs=None):
 
         self.dic['losses'] = self.losses
         self.dic['val_losses'] = self.val_losses
+        self.dic['lrs'] = self.lrs
