@@ -68,8 +68,8 @@ if __name__ == '__main__':
 
     plt.plot(class_weights)
     plt.yscale('log', nonposy='clip')
-    plt.title(f_basename + ' intra-class weights')
-    plt.xlabel('Digitize energy')
+    plt.title(f_basename + '\nintra-class weights')
+    plt.xlabel('Digitized energy')
     plt.ylabel('Weight')
     plt.savefig(f_basename + '_intra-class_weights.png', format='png')
 

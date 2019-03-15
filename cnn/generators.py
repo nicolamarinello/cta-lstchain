@@ -1,5 +1,4 @@
 import multiprocessing
-# import threading
 import os
 
 import h5py
@@ -10,13 +9,22 @@ import numpy as np
 class DataGeneratorC(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, h5files, batch_size=32, arrival_time=False, shuffle=True):
+    def __init__(self, h5files, batch_size=32, arrival_time=False, weights=None, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
-        self.indexes = np.array([], dtype=np.int64).reshape(0, 3)
+        self.indexes = np.array([], dtype=np.int64).reshape(0, 4)
         self.shuffle = shuffle
         self.generate_indexes()
         self.arrival_time = arrival_time
+        self.weighted = False
+        if weights is not None:
+            self.weighted = True
+            data = np.load(weights[0])
+            self.gamm_edges = data['edges']
+            self.gamm_w = data['class_weights']
+            data = np.load(weights[1])
+            self.prot_edges = data['edges']
+            self.prot_w = data['class_weights']
         self.on_epoch_end()
 
     def __len__(self):
@@ -38,11 +46,11 @@ class DataGeneratorC(keras.utils.Sequence):
         # list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        x, y = self.__data_generation(indexes)
+        x, y, w = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
 
-        return x, y
+        return x, y, w
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]
@@ -62,22 +70,6 @@ class DataGeneratorC(keras.utils.Sequence):
 
         return image, time, gt, mc_energy
 
-    def get_all(self):
-
-        # Generate indexes of the batch
-        indexes = self.indexes
-
-        old_bs = self.batch_size
-
-        self.batch_size = len(self.indexes)
-
-        # Generate data
-        x, y = self.__data_generation(indexes)
-
-        self.batch_size = old_bs
-
-        return x, y
-
     def chunkit(self, seq, num):
 
         avg = len(seq) / float(num)
@@ -92,22 +84,23 @@ class DataGeneratorC(keras.utils.Sequence):
 
     def worker(self, h5files, positions, i, return_dict):
 
-        idx = np.array([], dtype=np.int64).reshape(0, 3)
+        idx = np.array([], dtype=np.int64).reshape(0, 4)
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index']
+            lst_idx = h5f['LST/LST_event_index'][1:]
             h5f.close()
             r = np.arange(len(lst_idx))
 
             fn_basename = os.path.basename(os.path.normpath(f))
 
-            clas = 0  # class: proton by default
+            clas = np.zeros(len(r))  # class: proton by default
 
             if fn_basename.startswith('g'):
-                clas = 1
+                clas = np.ones(len(r))
 
-            cp = np.dstack(np.meshgrid([positions[l]], r, clas)).reshape(-1, 3)  # cartesian product
+            # cp = np.dstack(np.meshgrid([positions[l]], r, clas, lst_idx)).reshape(-1, 4)  # cartesian product
+            cp = np.dstack(([positions[l]] * len(r), r, clas, lst_idx)).reshape(-1, 4)
 
             idx = np.append(idx, cp, axis=0)
         return_dict[i] = idx
@@ -152,6 +145,7 @@ class DataGeneratorC(keras.utils.Sequence):
         # Initialization
         x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
         y = np.empty([self.batch_size], dtype=int)
+        w = np.ones([self.batch_size], dtype=float)
 
         # print('__data_generation', indexes)
 
@@ -167,24 +161,27 @@ class DataGeneratorC(keras.utils.Sequence):
             x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
                 x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
-            h5f.close()
             # Store class
-            y[i] = row[2]
+            y[i] = int(row[2])
 
-            # if y[i] == 0:
-            #    x[i,] = np.full((100, 100), 0)
-            # if y[i] == 1:
-            #    x[i,] = np.full((100, 100), 1)
+            if self.weighted:
+                e = np.log10(h5f['Event_Info/ei_mc_energy'][:][int(row[3])])
+                if row[2] == 1:
+                    j = np.digitize(e, self.gamm_edges)
+                    w[i] = self.gamm_w[j - 1]
+                else:
+                    j = np.digitize(e, self.prot_edges)
+                    w[i] = self.prot_w[j - 1]
 
-        # x = x.reshape(x.shape[0], 1, 100, 100)
+            h5f.close()
 
-        return x, y
+        return x, y, w
 
 
 class DataGeneratorR(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, h5files, feature, batch_size=32, arrival_time=False, shuffle=True):
+    def __init__(self, h5files, feature, batch_size=32, arrival_time=False, weights=None, shuffle=True):
         self.batch_size = batch_size
         self.h5files = h5files
         self.feature = feature
@@ -192,11 +189,15 @@ class DataGeneratorR(keras.utils.Sequence):
         self.shuffle = shuffle
         self.generate_indexes()
         self.arrival_time = arrival_time
-        self.on_epoch_end()
+        self.weighted = False
+        if weights is not None:
+            self.weighted = True
+            data = np.load(weights[0])
+            self.gamm_edges = data['edges']
+            self.gamm_w = data['class_weights']
         self.outcomes = 1
         if feature == 'xy': self.outcomes += 1
-        # self.test_mode = test_mode
-        # self.feature_array = np.array([])
+        self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -213,36 +214,17 @@ class DataGeneratorR(keras.utils.Sequence):
         # list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        x, y = self.__data_generation(indexes)
+        x, y, w = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
 
         # if self.test_mode:
         #    self.feature_array = np.append(self.feature_array, y)
 
-        return x, y
+        return x, y, w
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]
-
-    def get_all(self):
-
-        # Generate indexes of the batch
-        indexes = self.indexes
-
-        old_bs = self.batch_size
-
-        self.batch_size = len(self.indexes)
-
-        # Generate data
-        x, y = self.__data_generation(indexes)
-
-        self.batch_size = old_bs
-
-        return x, y
-
-    def get_feat_array(self):
-        return self.feature_array
 
     def chunkit(self, seq, num):
 
@@ -262,7 +244,7 @@ class DataGeneratorR(keras.utils.Sequence):
 
         for l, f in enumerate(h5files):
             h5f = h5py.File(f, 'r')
-            lst_idx = h5f['LST/LST_event_index']
+            lst_idx = h5f['LST/LST_event_index'][1:]
             h5f.close()
 
             r = np.arange(len(lst_idx))
@@ -312,6 +294,7 @@ class DataGeneratorR(keras.utils.Sequence):
         # Initialization
         x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
         y = np.empty([self.batch_size, self.outcomes], dtype=float)
+        w = np.ones([self.batch_size], dtype=float)
 
         # Generate data
         for i, row in enumerate(indexes):
@@ -332,8 +315,14 @@ class DataGeneratorR(keras.utils.Sequence):
                 y[i, 0] = h5f['Event_Info/ei_core_x'][:][int(row[2])]
                 y[i, 1] = h5f['Event_Info/ei_core_y'][:][int(row[2])]
 
+            # store weight
+            if self.weighted:
+                e = np.log10(h5f['Event_Info/ei_mc_energy'][:][int(row[3])])
+                j = np.digitize(e, self.gamm_edges)
+                w[i] = self.gamm_w[j - 1]
+
             h5f.close()
 
         # x = x.reshape(x.shape[0], 1, 100, 100)
 
-        return x, y
+        return x, y, w

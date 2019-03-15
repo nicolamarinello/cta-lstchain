@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import multiprocessing as mp
 import pickle
 import random
 import sys
@@ -11,14 +12,12 @@ import keras
 import numpy as np
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.utils.data_utils import OrderedEnqueuer
-from keras.utils.generic_utils import Progbar
 
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
-    ResNetF, ResNetG, ResNetH, ResNetXt
+    ResNetF, ResNetG, ResNetH, DenseNet
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
@@ -51,11 +50,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
     parser.add_argument(
+        '--iweights', type=bool, default=False, help='Specify if use intra class weights.', required=False)
+    parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
     parser.add_argument(
         '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     # cmd line parameters
     folders = FLAGS.dirs
@@ -69,6 +73,7 @@ if __name__ == "__main__":
     lropf = FLAGS.lrop
     clr = FLAGS.clr
     es = FLAGS.es
+    we = FLAGS.iweights
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
@@ -104,6 +109,14 @@ if __name__ == "__main__":
     maximum_momentum = 0.95
     minimum_momentum = 0.90
 
+    # intra class weights
+    gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
+    protn_w_path = './Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
+
+    weights = None
+    if we:
+        weights = [gdiff_w_path, protn_w_path]
+
     h5files = get_all_files(folders)
     random.shuffle(h5files)
     # reduction = int(len(h5files)*red)
@@ -123,7 +136,8 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
+    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, weights=weights,
+                                        shuffle=shuffle)
 
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -131,7 +145,8 @@ if __name__ == "__main__":
 
     if val:
         print('Building validation generator...')
-        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False)
+        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, weights=None,
+                                              shuffle=False)
 
         valid_idxs = validation_generator.get_indexes()
         valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
@@ -180,6 +195,12 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Min momentum: ' + str(minimum_momentum)
         hype_print += '\n' + '-----------'
 
+    if we:
+        hype_print += '\n' + '--- Intra class weights ---'
+        hype_print += '\n' + 'Gamma-diffuse: ' + gdiff_w_path
+        hype_print += '\n' + 'Protons: ' + protn_w_path
+        hype_print += '\n' + '-----------'
+
     hype_print += '\n' + 'Workers: ' + str(workers)
     hype_print += '\n' + 'Shuffle: ' + str(shuffle)
 
@@ -192,64 +213,101 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
         hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
+    keras.backend.set_image_data_format('channels_first')
+
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)
         model = class_v1.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ClassifierV2':
         class_v2 = ClassifierV2(img_rows, img_cols)
         model = class_v2.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ClassifierV3':
         class_v3 = ClassifierV3(img_rows, img_cols)
         model = class_v3.get_model()
-    elif model_name == 'ResNetXt':
-        cardinality = 32
-        print('Cardinality', cardinality)
-        resnet = ResNetXt(img_rows, img_cols)
-        model = resnet.get_model(cardinality=cardinality)
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet20V1':
         resnet = ResNet(img_rows, img_cols)
         model = resnet.get_model(1, 3)
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet32V1':
         resnet = ResNet(img_rows, img_cols)
         model = resnet.get_model(1, 5)
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetA':
         resnet = ResNetA(img_rows, img_cols)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetB':
         wd = 3e-6
         print('Weight decay: ', wd)
         resnet = ResNetB(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetC':
         wd = 0
         print('Weight decay: ', wd)
         resnet = ResNetC(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetD':
         wd = 0
         print('Weight decay: ', wd)
         resnet = ResNetD(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetE':
         wd = 0
         print('Weight decay: ', wd)
         resnet = ResNetE(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetF':
         wd = 1e-4
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetF(channels, img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetG':
         wd = 0
         print('Weight decay: ', wd)
         resnet = ResNetG(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetH':
         wd = 1e-3
         print('Weight decay: ', wd)
         resnet = ResNetH(img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'DenseNet':
+        depth = 124
+        growth_rate = 12
+        bottleneck = True
+        reduction = 0.5
+        densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
+                            reduction=reduction)
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -333,7 +391,7 @@ if __name__ == "__main__":
     model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
 
     if val:
-
+        """
         print('Getting validation data...')
         steps_done = 0
         steps = len(validation_generator)
@@ -352,7 +410,7 @@ if __name__ == "__main__":
 
         while steps_done < steps:
             generator_output = next(output_generator)
-            x, y = generator_output
+            x, y, _ = generator_output
             # X_val = np.append(X_val, x, axis=0)
             # Y_val = np.append(Y_val, y)
             X_val.append(x)
@@ -360,14 +418,14 @@ if __name__ == "__main__":
             steps_done += 1
             progbar.update(steps_done)
 
-        X_val = np.array(X_val).reshape(steps*batch_size, channels, img_rows, img_cols)
-        Y_val = np.array(Y_val).reshape(steps*batch_size)
+        X_val = np.array(X_val).reshape(steps * batch_size, channels, img_rows, img_cols)
+        Y_val = np.array(Y_val).reshape(steps * batch_size)
 
         print('XVal shapes:', X_val.shape)
         print('YVal shapes:', Y_val.shape)
-
+        """
         model.fit_generator(generator=training_generator,
-                            validation_data=(X_val, Y_val),
+                            validation_data=validation_generator,
                             steps_per_epoch=len(training_generator) * red,
                             validation_steps=len(validation_generator) * red,
                             epochs=epochs,

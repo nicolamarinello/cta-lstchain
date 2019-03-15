@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import multiprocessing as mp
 import pickle
 import random
 import sys
@@ -11,8 +12,6 @@ import keras
 import numpy as np
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.utils.data_utils import OrderedEnqueuer
-from keras.utils.generic_utils import Progbar
 
 from clr import OneCycleLR
 from generators import DataGeneratorR
@@ -50,6 +49,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
     parser.add_argument(
+        '--iweights', type=bool, default=False, help='Specify if use intra class weights.', required=False)
+    parser.add_argument(
         '--feature', type=str, default='energy', help='Feature to train/predict.', required=True)
     parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
@@ -57,6 +58,9 @@ if __name__ == "__main__":
         '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     # cmd line parameters
     folders = FLAGS.dirs
@@ -70,6 +74,7 @@ if __name__ == "__main__":
     lropf = FLAGS.lrop
     clr = FLAGS.clr
     es = FLAGS.es
+    we = FLAGS.iweights
     feature = FLAGS.feature
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
@@ -106,6 +111,13 @@ if __name__ == "__main__":
     maximum_momentum = 0.95
     minimum_momentum = 0.90
 
+    # intra class weights
+    gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
+
+    weights = None
+    if we:
+        weights = [gdiff_w_path]
+
     h5files = get_all_files(folders)
     random.shuffle(h5files)
     # reduction = int(len(h5files)*red)
@@ -125,22 +137,14 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, feature=feature,
-                                        shuffle=shuffle)
-
-    train_idxs = training_generator.get_indexes()
-    train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
-    train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
+    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, weights=weights,
+                                        feature=feature, shuffle=shuffle)
 
     if val:
         print('Building validation generator...')
-        validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time,
+        validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, weights=None,
                                               feature=feature,
                                               shuffle=False)
-
-        valid_idxs = validation_generator.get_indexes()
-        valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
-        valid_protons = np.unique(valid_idxs[:, 2], return_counts=True)[1][0]
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
@@ -190,17 +194,15 @@ if __name__ == "__main__":
     hype_print += '\n' + 'Shuffle: ' + str(shuffle)
 
     hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
-    hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
-    hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
 
     if val:
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
-        # hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
-        # hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
     outcomes = 1
     if feature == 'xy':
         outcomes = 2
+
+    keras.backend.set_image_data_format('channels_first')
 
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
@@ -213,6 +215,8 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetF(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNetH':
         wd = 0
         hype_print += '\n' + 'Weight decay: ' + str(wd)
@@ -311,7 +315,7 @@ if __name__ == "__main__":
     model.compile(optimizer=optimizer, loss='mean_absolute_error')
 
     if val:
-
+        """
         print('Getting validation data...')
         steps_done = 0
         steps = len(validation_generator)
@@ -347,9 +351,9 @@ if __name__ == "__main__":
 
         print('XVal shapes:', X_val.shape)
         print('YVal shapes:', Y_val.shape)
-
+        """
         model.fit_generator(generator=training_generator,
-                            validation_data=(X_val, Y_val),
+                            validation_data=validation_generator,
                             steps_per_epoch=len(training_generator) * red,
                             validation_steps=len(validation_generator) * red,
                             epochs=epochs,
