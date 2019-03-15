@@ -174,6 +174,10 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Decay: ' + str(decay)
         hype_print += '\n' + 'Momentum: ' + str(momentum)
         hype_print += '\n' + '-----------'
+    elif opt == 'adam':
+        hype_print += '\n' + '--- ADAM ---'
+        hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
+        hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
         hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)

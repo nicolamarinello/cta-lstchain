@@ -37,7 +37,7 @@ def tester(folders, mdl, batch_size, time, feature, workers):
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        _, y, _ = generator_output
+        _, y = generator_output
         gt_feature.append(y)
         # print('steps_done', steps_done)
         # print(y)
@@ -88,7 +88,7 @@ def tester(folders, mdl, batch_size, time, feature, workers):
 
         while steps_done < steps:
             generator_output = next(output_generator)
-            _, y, _ = generator_output
+            _, y = generator_output
             gt_energy.append(y)
             # print('steps_done', steps_done)
             # print(y)

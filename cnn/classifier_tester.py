@@ -77,7 +77,7 @@ def tester(folders, mdl, batch_size, atime, workers):
         image, time, gt, mc_energy = test_generator.get_event(i)
         mis_en = np.append(mis_en, [mc_energy])
 
-    bins = 10
+    bins = 100
 
     plt.figure(0)
     plt.hist(mis_en, bins)

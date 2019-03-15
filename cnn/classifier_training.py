@@ -136,8 +136,7 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, weights=weights,
-                                        shuffle=shuffle)
+    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
 
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -145,8 +144,7 @@ if __name__ == "__main__":
 
     if val:
         print('Building validation generator...')
-        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, weights=None,
-                                              shuffle=False)
+        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False)
 
         valid_idxs = validation_generator.get_indexes()
         valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
@@ -179,6 +177,10 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Decay: ' + str(decay)
         hype_print += '\n' + 'Momentum: ' + str(momentum)
         hype_print += '\n' + '-----------'
+    elif opt == 'adam':
+        hype_print += '\n' + '--- ADAM ---'
+        hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
+        hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
         hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)

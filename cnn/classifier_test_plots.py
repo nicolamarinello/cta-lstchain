@@ -44,14 +44,15 @@ def test_plots(csv):
 
     ar = roc_auc_score(y_gt, y_pr)
     fpr, tpr, thresholds = roc_curve(y_gt, y_pr)
+    accscore = accuracy_score(df['GroundTruth'], df['Predicted'].round(), normalize=True)
 
-    print(x)
+    print('AUC_ROC: ', ar)
+    print('Accuracy: ', accscore)
 
     with open(folder + '/test_table.txt', 'w') as f:
         print(x, file=f)
-
-    print('AUC_ROC: ', ar)
-    print('Accuracy: ', accuracy_score(df['GroundTruth'], df['Predicted'].round(), normalize=True))
+        print('AUC_ROC: ', ar, file=f)
+        print('Accuracy: ', accscore, file=f)
 
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 

@@ -6,6 +6,7 @@ import numpy as np
 from keras.utils.data_utils import OrderedEnqueuer
 from keras.utils.generic_utils import Progbar
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.preprocessing import normalize
 
 from generators import DataGeneratorR
 from utils import get_all_files
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     inds = np.digitize(ei_mc_energy, edges)
 
     class_weights = compute_class_weight('balanced', np.unique(inds), inds)
+    class_weights = class_weights / np.linalg.norm(class_weights)
 
     np.savez(f_basename + '_intra-class_weights.npz', edges=np.array(edges),
              class_weights=np.array(class_weights))
