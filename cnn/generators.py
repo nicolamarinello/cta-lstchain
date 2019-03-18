@@ -41,7 +41,7 @@ class DataGeneratorC(keras.utils.Sequence):
 
         # print("training idx: ", indexes)
 
-        return x, y, w
+        return x, y
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]

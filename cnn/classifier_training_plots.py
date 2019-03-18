@@ -38,9 +38,9 @@ def train_plots(filen, tran):
     ax.set_title('Training accuracy')
     ax.grid(True)
 
-    fig.suptitle('Training history')
+    # fig.suptitle('Training history')
 
-    fig.savefig(folder + '/classifier_training.png', transparent=tran)
+    fig.savefig(folder + '/classifier_training.eps', format='eps', transparent=tran)
 
     # validation loss & accuracy
     fig2, axs2 = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
@@ -59,9 +59,9 @@ def train_plots(filen, tran):
     ax.set_title('Validation accuracy')
     ax.grid(True)
 
-    fig2.suptitle('Validation history')
+    # fig2.suptitle('Validation history')
 
-    fig2.savefig(folder + '/classifier_validation.png', transparent=tran)
+    fig2.savefig(folder + '/classifier_validation.eps', format='eps', transparent=tran)
 
     # training + validation lxoss & accuracy
     fig3, axs3 = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
@@ -86,7 +86,7 @@ def train_plots(filen, tran):
 
     fig3.suptitle('Training history')
 
-    fig3.savefig(folder + '/classifier_train_val.png', transparent=tran)
+    fig3.savefig(folder + '/classifier_train_val.eps', format='eps', transparent=tran)
 
     # lr
     fig3, axs3 = plt.subplots(nrows=1, ncols=1, figsize=(6.5, 5))
@@ -99,7 +99,7 @@ def train_plots(filen, tran):
 
     # fig3.suptitle('Training history')
 
-    fig3.savefig(folder + '/lr.png', transparent=tran)
+    fig3.savefig(folder + '/lr.eps', format='eps', transparent=tran)
 
     # plt.show()
 

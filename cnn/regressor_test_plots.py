@@ -55,7 +55,7 @@ def test_plots(pkl, feature):
                     round(sigma, 3)))
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(folder + '/histograms.png', format='png', transparent=False)
+        plt.savefig(folder + '/histograms.eps', format='eps', transparent=False)
 
         fig = plt.figure()
 
@@ -66,8 +66,8 @@ def test_plots(pkl, feature):
         plt.plot(df['GroundTruth'], df['GroundTruth'], "-", color='red')
 
         plt.title('Histogram2D - Energy reconstruction')
-
-        plt.savefig(folder + '/histogram2d.png', format='png', transparent=False)
+        plt.tight_layout()
+        plt.savefig(folder + '/histogram2d.eps', format='eps', transparent=False)
 
         fig = plt.figure()
 
@@ -83,7 +83,7 @@ def test_plots(pkl, feature):
         plt.xlabel('$E_{gammas}[TeV]$', fontsize=15)
         plt.title('Energy resolution')
         fig.tight_layout()
-        plt.savefig(folder + '/energy_res.png', format='png', transparent=False)
+        plt.savefig(folder + '/energy_res.eps', format='eps', transparent=False)
 
     elif feature == 'xy':
 
@@ -121,7 +121,7 @@ def test_plots(pkl, feature):
                     round(sigma, 3)))
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(folder + '/histograms.png', format='png', transparent=False)
+        plt.savefig(folder + '/histograms.eps', format='eps', transparent=False)
 
         fig = plt.figure()
 
@@ -136,7 +136,7 @@ def test_plots(pkl, feature):
         plt.xlabel('$E_{gammas}[TeV]$', fontsize=15)
         plt.title('Angular resolution')
         fig.tight_layout()
-        plt.savefig(folder + '/angular_res.png', format='png', transparent=False)
+        plt.savefig(folder + '/angular_res.eps', format='eps', transparent=False)
 
     print('Plots done')
 

@@ -1377,8 +1377,8 @@ class ResNetH:
 
 class DenseNet:
 
-    def __init__(self, channels, img_rows, img_cols, depth, nb_dense_block, growth_rate, nb_filter, nb_layers_per_block,
-                 bottleneck, reduction, dropout_rate, weight_decay):
+    def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
+                 nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4):
         self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols

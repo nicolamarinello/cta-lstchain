@@ -80,7 +80,7 @@ def test_plots(csv):
 
     fig.suptitle(r'ROC and $\zeta$ distribution')
 
-    fig.savefig(folder + '/ROC.png', transparent=False)
+    fig.savefig(folder + '/ROC.eps', format='eps', transparent=False)
 
     fig2, axs2 = plt.subplots(nrows=1, ncols=1)
 
@@ -91,7 +91,7 @@ def test_plots(csv):
     ax.set_xlabel(r'$\zeta$')
     ax.set_ylabel('eg/Sqrt(ep)')
 
-    fig2.savefig(folder + '/significance.png', transparent=False)
+    fig2.savefig(folder + '/significance.eps', format='eps', transparent=False)
 
     # plt.show()
 

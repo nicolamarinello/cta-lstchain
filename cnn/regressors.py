@@ -1,9 +1,11 @@
 import keras
+from keras import layers, models
 from keras.layers import Dropout, Flatten, Dense, Conv2D, AveragePooling2D, BatchNormalization, Activation, Input
 from keras.models import Model
 from keras.models import Sequential
-from keras import layers, models
 from keras.regularizers import l2
+
+import densenet
 
 
 class RegressorV2:
@@ -452,7 +454,6 @@ class ResNetH:
 
 
 class ResNetXt:
-
     """
     Clean and simple Keras implementation of network architectures described in:
         - (ResNet-50) [Deep Residual Learning for Image Recognition](https://arxiv.org/pdf/1512.03385.pdf).
@@ -495,7 +496,8 @@ class ResNetXt:
             def grouped_convolution(y, nb_channels, _strides):
                 # when `cardinality` == 1 this is just a standard convolution
                 if cardinality == 1:
-                    return layers.Conv2D(nb_channels, kernel_size=(3, 3), strides=_strides, data_format='channels_first', padding='same')(y)
+                    return layers.Conv2D(nb_channels, kernel_size=(3, 3), strides=_strides,
+                                         data_format='channels_first', padding='same')(y)
                 # print('cardinality:', cardinality)
                 # print('nb_channels:', nb_channels)
                 assert not nb_channels % cardinality
@@ -738,5 +740,41 @@ class ResNetI:
         y = Flatten()(x)
         outputs = Dense(self.outcomes, activation='linear', kernel_initializer='he_normal')(y)
         model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
+
+class DenseNet:
+
+    def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
+                 nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.depth = depth
+        self.nb_dense_block = nb_dense_block
+        self.growth_rate = growth_rate
+        self.nb_filter = nb_filter
+        self.nb_layers_per_block = nb_layers_per_block
+        self.bottleneck = bottleneck
+        self.reduction = reduction
+        self.dropout_rate = dropout_rate
+        self.weight_decay = weight_decay
+
+    def get_model(self):
+        input_shape = (self.channels, self.img_rows, self.img_cols)
+
+        model = densenet.DenseNet(input_shape=input_shape,
+                                  depth=self.depth,
+                                  nb_dense_block=self.nb_dense_block,
+                                  growth_rate=self.growth_rate,
+                                  nb_filter=self.nb_filter,
+                                  nb_layers_per_block=self.nb_layers_per_block,
+                                  bottleneck=self.bottleneck,
+                                  reduction=self.reduction,
+                                  dropout_rate=self.dropout_rate,
+                                  weight_decay=self.weight_decay,
+                                  classes=1,
+                                  activation='linear')
 
         return model

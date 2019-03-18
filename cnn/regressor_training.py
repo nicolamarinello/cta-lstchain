@@ -9,8 +9,8 @@ from os import mkdir
 from os.path import isfile, join
 
 import keras
-import numpy as np
 from keras import optimizers
+from keras.callbacks import LearningRateScheduler
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
 from clr import OneCycleLR
@@ -22,62 +22,21 @@ from regressor_training_plots import train_plots
 from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI
 from utils import get_all_files
 
-if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+# learning rate schedule
+def step_decay(epoch):
+    current = K.eval(model.optimizer.lr)
+    lrate = current
+    if epoch == 35:
+        lrate = current / 10
+        print('Reduced learning rate by a factor 10')
+    return lrate
 
-    parser.add_argument(
-        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
-    parser.add_argument(
-        '--model', type=str, default='', help='Model type.', required=True)
-    parser.add_argument(
-        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
-    parser.add_argument(
-        '--epochs', type=int, default=10, help='Number of epochs.', required=True)
-    parser.add_argument(
-        '--batch_size', type=int, default=10, help='Batch size.', required=True)
-    parser.add_argument(
-        '--opt', type=str, default=False, help='Specify the optimizer.', required=False)
-    parser.add_argument(
-        '--val', type=bool, default=False, help='Specify if compute validation.', required=False)
-    parser.add_argument(
-        '--red', type=float, default=1, help='Specify if use reduced training set.', required=False)
-    parser.add_argument(
-        '--lrop', type=bool, default=False, help='Specify if use reduce lr on plateau.', required=False)
-    parser.add_argument(
-        '--clr', type=bool, default=False, help='Specify if use CLR.', required=False)
-    parser.add_argument(
-        '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
-    parser.add_argument(
-        '--iweights', type=bool, default=False, help='Specify if use intra class weights.', required=False)
-    parser.add_argument(
-        '--feature', type=str, default='energy', help='Feature to train/predict.', required=True)
-    parser.add_argument(
-        '--workers', type=int, default='', help='Number of workers.', required=True)
-    parser.add_argument(
-        '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
 
-    FLAGS, unparsed = parser.parse_known_args()
-
+def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
+                            workers, test_dirs):
     # avoid validation deadlock problem
     mp.set_start_method('spawn', force=True)
-
-    # cmd line parameters
-    folders = FLAGS.dirs
-    model_name = FLAGS.model
-    time = FLAGS.time
-    epochs = FLAGS.epochs
-    batch_size = FLAGS.batch_size
-    opt = FLAGS.opt
-    val = FLAGS.val
-    red = FLAGS.red
-    lropf = FLAGS.lrop
-    clr = FLAGS.clr
-    es = FLAGS.es
-    we = FLAGS.iweights
-    feature = FLAGS.feature
-    workers = FLAGS.workers
-    test_dirs = FLAGS.test_dirs
 
     # hard coded parameters
     shuffle = True
@@ -112,11 +71,11 @@ if __name__ == "__main__":
     minimum_momentum = 0.90
 
     # intra class weights
-    gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
+    # gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
 
-    weights = None
-    if we:
-        weights = [gdiff_w_path]
+    # weights = None
+    # if we:
+    #    weights = [gdiff_w_path]
 
     h5files = get_all_files(folders)
     random.shuffle(h5files)
@@ -137,14 +96,13 @@ if __name__ == "__main__":
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, weights=weights,
-                                        feature=feature, shuffle=shuffle)
+    training_generator = DataGeneratorR(training_files, batch_size=batch_size, arrival_time=time, feature=feature,
+                                        shuffle=shuffle)
 
     if val:
         print('Building validation generator...')
-        validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time, weights=None,
-                                              feature=feature,
-                                              shuffle=False)
+        validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time,
+                                              feature=feature, shuffle=False)
 
     # class_weight = {0: 1., 1: train_protons/train_gammas}
     # print(class_weight)
@@ -193,6 +151,10 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Max momentum:' + str(maximum_momentum)
         hype_print += '\n' + 'Min momentum: ' + str(minimum_momentum)
         hype_print += '\n' + '-----------'
+    # if we:
+    #    hype_print += '\n' + '--- Intra class weights ---'
+    #    hype_print += '\n' + 'Gamma-diffuse: ' + gdiff_w_path
+    #    hype_print += '\n' + '-----------'
 
     hype_print += '\n' + 'Workers: ' + str(workers)
     hype_print += '\n' + 'Shuffle: ' + str(shuffle)
@@ -236,6 +198,20 @@ if __name__ == "__main__":
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetI(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
+    elif model_name == 'DenseNet':
+        depth = 64
+        growth_rate = 12
+        bottleneck = True
+        reduction = 0.5
+        densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
+                            reduction=reduction)
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -304,6 +280,10 @@ if __name__ == "__main__":
                                                  min_delta=md_lrop, cooldown=cd_lrop, min_lr=mlr_lrop)
         callbacks.append(lrop)
 
+    if sd:
+        stepd = LearningRateScheduler(step_decay)
+        callbacks.append(stepd)
+
     if es:
         # early stopping
         early_stopping = EarlyStopping(monitor='val_loss', min_delta=md_es, patience=p_es, verbose=1, mode='max')
@@ -319,43 +299,6 @@ if __name__ == "__main__":
     model.compile(optimizer=optimizer, loss='mean_absolute_error')
 
     if val:
-        """
-        print('Getting validation data...')
-        steps_done = 0
-        steps = len(validation_generator)
-
-        enqueuer = OrderedEnqueuer(validation_generator, use_multiprocessing=True)
-        enqueuer.start(workers=workers, max_queue_size=10)
-        output_generator = enqueuer.get()
-
-        progbar = Progbar(target=steps)
-
-        # X_val = np.array([]).reshape(0, channels, img_rows, img_cols)
-        # Y_val = np.array([])
-
-        X_val = []
-        Y_val = []
-
-        while steps_done < steps:
-            generator_output = next(output_generator)
-            x, y = generator_output
-            # X_val = np.append(X_val, x, axis=0)
-            # Y_val = np.append(Y_val, y)
-            X_val.append(x)
-            Y_val.append(y)
-            steps_done += 1
-            progbar.update(steps_done)
-
-        X_val = np.array(X_val).reshape(steps * batch_size, channels, img_rows, img_cols)
-
-        if feature == 'energy':
-            Y_val = np.array(Y_val).reshape(steps*batch_size)
-        elif feature == 'xy':
-            Y_val = np.array(Y_val).reshape(steps*batch_size, 2)
-
-        print('XVal shapes:', X_val.shape)
-        print('YVal shapes:', Y_val.shape)
-        """
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
                             steps_per_epoch=len(training_generator) * red,
@@ -420,3 +363,63 @@ if __name__ == "__main__":
         if len(test_dirs) > 0:
             pkl = tester(test_dirs, best, batch_size, time, feature, workers)
             test_plots(pkl, feature)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
+    parser.add_argument(
+        '--model', type=str, default='', help='Model type.', required=True)
+    parser.add_argument(
+        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
+    parser.add_argument(
+        '--epochs', type=int, default=10, help='Number of epochs.', required=True)
+    parser.add_argument(
+        '--batch_size', type=int, default=10, help='Batch size.', required=True)
+    parser.add_argument(
+        '--opt', type=str, default=False, help='Specify the optimizer.', required=False)
+    parser.add_argument(
+        '--val', type=bool, default=False, help='Specify if compute validation.', required=False)
+    parser.add_argument(
+        '--red', type=float, default=1, help='Specify if use reduced training set.', required=False)
+    parser.add_argument(
+        '--lrop', type=bool, default=False, help='Specify if use reduce lr on plateau.', required=False)
+    parser.add_argument(
+        '--sd', type=bool, default=False, help='Step decay.', required=False)
+    parser.add_argument(
+        '--clr', type=bool, default=False, help='Specify if use CLR.', required=False)
+    parser.add_argument(
+        '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
+    # parser.add_argument(
+    #     '--iweights', type=bool, default=False, help='Specify if use intra class weights.', required=False)
+    parser.add_argument(
+        '--feature', type=str, default='energy', help='Feature to train/predict.', required=True)
+    parser.add_argument(
+        '--workers', type=int, default='', help='Number of workers.', required=True)
+    parser.add_argument(
+        '--test_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files test data.', required=False)
+
+    FLAGS, unparsed = parser.parse_known_args()
+
+    # cmd line parameters
+    folders = FLAGS.dirs
+    model_name = FLAGS.model
+    time = FLAGS.time
+    epochs = FLAGS.epochs
+    batch_size = FLAGS.batch_size
+    opt = FLAGS.opt
+    val = FLAGS.val
+    red = FLAGS.red
+    lropf = FLAGS.lrop
+    sd = FLAGS.sd
+    clr = FLAGS.clr
+    es = FLAGS.es
+    # we = FLAGS.iweights
+    feature = FLAGS.feature
+    workers = FLAGS.workers
+    test_dirs = FLAGS.test_dirs
+
+    regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
+                            workers, test_dirs)
