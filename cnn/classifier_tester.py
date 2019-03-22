@@ -29,6 +29,8 @@ def tester(folders, mdl, batch_size, atime, workers):
     gt_labels = test_idxs[:, 2].reshape(test_idxs[:, 2].shape[0])
     pr_labels = pr_labels.reshape(pr_labels.shape[0])
 
+    """
+
     # get wrong predicted images
     diff = np.array(gt_labels) - np.around(pr_labels)
     wrong = np.nonzero(diff)
@@ -45,7 +47,7 @@ def tester(folders, mdl, batch_size, atime, workers):
     cento = test_idxs_wrong[rnd_idxs, :]
     # cento = np.random.choice(test_idxs_wrong, sample_length)
 
-    """
+    
     # create pdf report
     nrow = sample_length
     ncol = 2
@@ -69,7 +71,7 @@ def tester(folders, mdl, batch_size, atime, workers):
 
     fig.savefig(mdl + '_misc_report.pdf', format='pdf')
     
-    """
+    
 
     # histogram based on failed predictions
     mis_en = np.array([])
@@ -87,6 +89,8 @@ def tester(folders, mdl, batch_size, atime, workers):
     plt.title('Misclassified events histogram - test set')
 
     plt.savefig(mdl + '_misc_hist.eps', format='eps')
+    
+    """
 
     # saving predictions
     df = pd.DataFrame()

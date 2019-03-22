@@ -19,7 +19,7 @@ from losseshistory import LossHistoryR
 from regressor_test_plots import test_plots
 from regressor_tester import tester
 from regressor_training_plots import train_plots
-from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI
+from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet
 from utils import get_all_files
 
 
@@ -203,8 +203,8 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         growth_rate = 12
         bottleneck = True
         reduction = 0.5
-        densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
-                            reduction=reduction)
+        densenet = DenseNet(channels, img_rows, img_cols, outcomes, depth=depth, growth_rate=growth_rate,
+                            bottleneck=bottleneck, reduction=reduction)
         model = densenet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)

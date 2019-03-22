@@ -109,16 +109,24 @@ def test_plots(pkl, feature):
                 # histogram
                 subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
                 theta2 = (dfbe['src_x'] - dfbe['src_x_rec']) ** 2 + (dfbe['src_y'] - dfbe['src_y']) ** 2
-                section = theta2[abs(theta2) < 1.5]
-                mu, sigma = norm.fit(section)
-                theta2_68 = np.append(theta2_68, np.percentile(theta2, 68))
-                n, bins, patches = plt.hist(theta2, 100, density=1, alpha=0.75)
-                y = norm.pdf(bins, mu, sigma)
-                plt.plot(bins, y, 'r--', linewidth=2)
+                # section = theta2[abs(theta2) < 1.5]
+                # mu, sigma = norm.fit(section)
+                # 68% containement computation
+                total = np.sum(theta2)
+                # theta2_68 = np.append(theta2_68, np.percentile(theta2, 68))
+                hist = np.histogram(theta2, bins=100)
+                for k in range(0, len(hist[0]) + 1):
+                    fraction = np.sum(hist[0][:k]) / total
+                    if fraction > 0.68:
+                        break
+                theta2_68 = np.append(theta2_68, hist[1][k])
+                n, bins, patches = plt.hist(theta2, 100, density=1, alpha=0.75, range=(0, hist[1][k]))
+                # y = norm.pdf(bins, mu, sigma)
+                # plt.plot(bins, y, 'r--', linewidth=2)
                 plt.xlabel(r'$\theta^{2}(º)$', fontsize=10)
-                plt.title('Energy [' + str(round(edge1, 3)) + ', ' + str(
-                    round(edge2, 3)) + '] $log_{10}(E_{gammas}[TeV])$' + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(
-                    round(sigma, 3)))
+                plt.title(
+                    'Energy [' + str(round(edge1, 3)) + ', ' + str(round(edge2, 3)) + '] $log_{10}(E_{gammas}[TeV])$')
+                # + ' Mean: ' + str(round(mu, 3)) + ' Std: ' + str(round(sigma, 3)))
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.savefig(folder + '/histograms.eps', format='eps', transparent=False)

@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import tables
 from astropy import units as u
+from ctapipe.coordinates import NominalFrame, AltAz
 from ctapipe.image import hillas_parameters, leakage
 from ctapipe.image.cleaning import tailcuts_clean
 from ctapipe.instrument import CameraGeometry
@@ -94,8 +95,19 @@ def func(paths, format, ro, rc, rn):
             # LST_image_charge_interp = np.zeros(
             #    (len(LST_image_charge), img_rows, img_cols))
 
+            # alt az of the array
+            az_array = ai_run_array_direction[0][0]
+            alt_array = ai_run_array_direction[0][1]
+
+            if alt_array > 90:
+                alt_array = 90
+
+            point = AltAz(alt=alt_array * u.rad, az=az_array * u.rad)
+
             lst_image_charge_interp = []
             lst_image_peak_times_interp = []
+            delta_az = []
+            delta_alt = []
             acc_idxs = []  # accepted indexes
 
             cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
@@ -122,10 +134,22 @@ def func(paths, format, ro, rc, rn):
                     leakage1_intensity = l['leakage1_intensity']
 
                     if intensity > 50 and leakage1_intensity < 0.2:
+                        # cubic interpolation
                         interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
                         interp_time = griddata(points, time, (grid_x, grid_y), fill_value=0, method='cubic')
+
+                        # delta az, delta alt computation
+                        az = ei_az[LST_event_index[i]]
+                        alt = ei_alt[LST_event_index[i]]
+                        src = AltAz(alt=alt * u.rad, az=az * u.rad)
+                        source_direction = src.transform_to(NominalFrame(origin=point))
+
+                        # appending to arrays
                         lst_image_charge_interp.append(interp_img)
                         lst_image_peak_times_interp.append(interp_time)
+                        delta_az.append(source_direction.delta_az.deg)
+                        delta_alt.append(source_direction.delta_alt.deg)
+
                         acc_idxs += [i]
 
             lst_image_charge_interp = np.array(lst_image_charge_interp)
@@ -153,13 +177,13 @@ def func(paths, format, ro, rc, rn):
                 # data_file.create_dataset(
                 #    'Array_Info/ai_tel_z', data=np.array(ai_tel_z))
 
-                # data_file.create_dataset(
-                #    'Event_Info/ei_alt', data=np.array(ei_alt))
+                data_file.create_dataset(
+                    'Event_Info/ei_alt', data=np.array(ei_alt))
                 data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
-                data_file.create_dataset(
-                    'Event_Info/ei_core_x', data=np.array(ei_core_x))
-                data_file.create_dataset(
-                    'Event_Info/ei_core_y', data=np.array(ei_core_y))
+                # data_file.create_dataset(
+                #    'Event_Info/ei_core_x', data=np.array(ei_core_x))
+                # data_file.create_dataset(
+                #    'Event_Info/ei_core_y', data=np.array(ei_core_y))
                 # data_file.create_dataset(
                 #    'Event_Info/ei_event_number', data=np.array(ei_event_number))
                 # data_file.create_dataset(
@@ -183,6 +207,10 @@ def func(paths, format, ro, rc, rn):
                     'LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
                 data_file.create_dataset(
                     'LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
+                data_file.create_dataset(
+                    'LST/delta_alt', data=np.array(delta_alt))
+                data_file.create_dataset(
+                    'LST/delta_az', data=np.array(delta_az))
                 data_file.close()
 
                 # in the interpolated files there will be all the original events

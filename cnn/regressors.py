@@ -746,7 +746,7 @@ class ResNetI:
 
 class DenseNet:
 
-    def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
+    def __init__(self, channels, img_rows, img_cols, outcomes, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
                  nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4):
         self.channels = channels
         self.img_rows = img_rows
@@ -760,6 +760,7 @@ class DenseNet:
         self.reduction = reduction
         self.dropout_rate = dropout_rate
         self.weight_decay = weight_decay
+        self.outcomes = outcomes
 
     def get_model(self):
         input_shape = (self.channels, self.img_rows, self.img_cols)
@@ -774,7 +775,7 @@ class DenseNet:
                                   reduction=self.reduction,
                                   dropout_rate=self.dropout_rate,
                                   weight_decay=self.weight_decay,
-                                  classes=1,
+                                  classes=self.outcomes,
                                   activation='linear')
 
         return model
