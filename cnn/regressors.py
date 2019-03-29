@@ -5,7 +5,7 @@ from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2
 
-import densenet
+import densenetlst
 
 
 class RegressorV2:
@@ -751,6 +751,7 @@ class DenseNet:
         self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
+        self.outcomes = outcomes
         self.depth = depth
         self.nb_dense_block = nb_dense_block
         self.growth_rate = growth_rate
@@ -760,22 +761,21 @@ class DenseNet:
         self.reduction = reduction
         self.dropout_rate = dropout_rate
         self.weight_decay = weight_decay
-        self.outcomes = outcomes
 
     def get_model(self):
         input_shape = (self.channels, self.img_rows, self.img_cols)
 
-        model = densenet.DenseNet(input_shape=input_shape,
-                                  depth=self.depth,
-                                  nb_dense_block=self.nb_dense_block,
-                                  growth_rate=self.growth_rate,
-                                  nb_filter=self.nb_filter,
-                                  nb_layers_per_block=self.nb_layers_per_block,
-                                  bottleneck=self.bottleneck,
-                                  reduction=self.reduction,
-                                  dropout_rate=self.dropout_rate,
-                                  weight_decay=self.weight_decay,
-                                  classes=self.outcomes,
-                                  activation='linear')
+        model = densenetlst.DenseNet(input_shape=input_shape,
+                                     depth=self.depth,
+                                     nb_dense_block=self.nb_dense_block,
+                                     growth_rate=self.growth_rate,
+                                     nb_filter=self.nb_filter,
+                                     nb_layers_per_block=self.nb_layers_per_block,
+                                     bottleneck=self.bottleneck,
+                                     reduction=self.reduction,
+                                     dropout_rate=self.dropout_rate,
+                                     weight_decay=self.weight_decay,
+                                     classes=self.outcomes,
+                                     activation='linear')
 
         return model

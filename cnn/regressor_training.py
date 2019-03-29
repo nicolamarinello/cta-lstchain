@@ -35,8 +35,6 @@ def step_decay(epoch):
 
 def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs):
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     # hard coded parameters
     shuffle = True
@@ -169,6 +167,8 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         outcomes = 2
 
     keras.backend.set_image_data_format('channels_first')
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
@@ -320,6 +320,8 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
                             workers=workers,
                             shuffle=False,
                             callbacks=callbacks)
+
+    # mp.set_start_method('fork')
 
     # save results
     train_history = root_dir + '/train-history'

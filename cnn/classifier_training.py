@@ -38,8 +38,6 @@ def step_decay(epoch):
 
 def classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs):
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     # hard coded parameters
     shuffle = True
@@ -181,6 +179,8 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
     keras.backend.set_image_data_format('channels_first')
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     if model_name == 'ClassifierV1':
         class_v1 = ClassifierV1(img_rows, img_cols)

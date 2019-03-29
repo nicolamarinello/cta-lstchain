@@ -108,19 +108,27 @@ def test_plots(pkl, feature):
                 dfbe = df[(df['energy'] >= edge1) & (df['energy'] < edge2)]
                 # histogram
                 subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
-                theta2 = (dfbe['src_x'] - dfbe['src_x_rec']) ** 2 + (dfbe['src_y'] - dfbe['src_y']) ** 2
+                theta2 = (dfbe['src_x'] - dfbe['src_x_rec']) ** 2 + (dfbe['src_y'] - dfbe['src_y_rec']) ** 2
                 # section = theta2[abs(theta2) < 1.5]
                 # mu, sigma = norm.fit(section)
                 # 68% containement computation
-                total = np.sum(theta2)
+                # total = np.sum(theta2)
+                total = len(theta2)
                 # theta2_68 = np.append(theta2_68, np.percentile(theta2, 68))
-                hist = np.histogram(theta2, bins=100)
+                hist = np.histogram(theta2, bins=1000)
                 for k in range(0, len(hist[0]) + 1):
                     fraction = np.sum(hist[0][:k]) / total
                     if fraction > 0.68:
+                        print('\nTotal: ', total)
+                        print('0.68 of total:', np.sum(hist[0][:k]))
+                        print('Fraction:', fraction)
+                        theta2_68 = np.append(theta2_68, hist[1][k])
                         break
-                theta2_68 = np.append(theta2_68, hist[1][k])
-                n, bins, patches = plt.hist(theta2, 100, density=1, alpha=0.75, range=(0, hist[1][k]))
+                # n, bins, patches = plt.hist(theta2, bins=100, range=(0, hist[1][k]))
+                n, bins, patches = plt.hist(theta2, bins=100)
+                plt.axvline(hist[1][k], color='r', linestyle='dashed', linewidth=1)
+                plt.yscale('log', nonposy='clip')
+                # patches[k].set_fc('r')
                 # y = norm.pdf(bins, mu, sigma)
                 # plt.plot(bins, y, 'r--', linewidth=2)
                 plt.xlabel(r'$\theta^{2}(º)$', fontsize=10)

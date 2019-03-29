@@ -256,7 +256,7 @@ def DenseNet(input_shape=None, depth=40, nb_dense_block=3, growth_rate=12, nb_fi
 
     if activation == 'sigmoid' and classes != 1:
         raise ValueError('sigmoid activation can only be used when classes = 1')
-
+    reduction
     img_input = Input(shape=input_shape)
 
     x = __create_dense_net(classes, img_input, include_top, depth, nb_dense_block,
@@ -269,6 +269,6 @@ def DenseNet(input_shape=None, depth=40, nb_dense_block=3, growth_rate=12, nb_fi
     return model
 
 
-image_dim = (2, 100, 100)
-model = DenseNet(classes=1, input_shape=image_dim, depth=64, growth_rate=12, bottleneck=True, reduction=0.5)
-model.summary()
+# image_dim = (2, 100, 100)
+# model = DenseNet(classes=1, input_shape=image_dim, depth=64, growth_rate=12, bottleneck=True, reduction=0.5)
+# model.summary()

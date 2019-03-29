@@ -29,7 +29,8 @@ def tester(folders, mdl, batch_size, atime, workers):
     gt_labels = test_idxs[:, 2].reshape(test_idxs[:, 2].shape[0])
     pr_labels = pr_labels.reshape(pr_labels.shape[0])
 
-    """
+    """ NON HA SENSO PERCHé SI STA FACENDO CONFRONTI TENENDO FISSATA LA SOGLIA 0.5...BISOGNA GUARDARE IN TUTTO IL RANGE
+        DI SOGLIE, PER QUESTO SI USA LA ROC
 
     # get wrong predicted images
     diff = np.array(gt_labels) - np.around(pr_labels)
