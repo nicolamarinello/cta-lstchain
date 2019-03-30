@@ -41,6 +41,9 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
 
     # hard coded parameters
     shuffle = True
+    if red:
+        shuffle = False
+
     img_rows, img_cols = 100, 100
     channels = 1
     if time:
