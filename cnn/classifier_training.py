@@ -181,7 +181,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
         hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
-    keras.backend.set_image_data_format('channels_first')
+    # keras.backend.set_image_data_format('channels_first')
     # avoid validation deadlock problem
     mp.set_start_method('spawn', force=True)
 

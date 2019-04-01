@@ -5,7 +5,7 @@ from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2
 
-import densenet
+import densenetlst
 
 
 class ClassifierV1:
@@ -1378,7 +1378,8 @@ class ResNetH:
 class DenseNet:
 
     def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
-                 nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4):
+                 nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4,
+                 subsample_initial_block=False):
         self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
@@ -1391,21 +1392,23 @@ class DenseNet:
         self.reduction = reduction
         self.dropout_rate = dropout_rate
         self.weight_decay = weight_decay
+        self.subsample_initial_block = subsample_initial_block
 
     def get_model(self):
-        input_shape = (self.channels, self.img_rows, self.img_cols)
+        input_shape = (self.img_rows, self.img_cols, self.channels)
 
-        model = densenet.DenseNet(input_shape=input_shape,
-                                  depth=self.depth,
-                                  nb_dense_block=self.nb_dense_block,
-                                  growth_rate=self.growth_rate,
-                                  nb_filter=self.nb_filter,
-                                  nb_layers_per_block=self.nb_layers_per_block,
-                                  bottleneck=self.bottleneck,
-                                  reduction=self.reduction,
-                                  dropout_rate=self.dropout_rate,
-                                  weight_decay=self.weight_decay,
-                                  classes=1,
-                                  activation='sigmoid')
+        model = densenetlst.DenseNet(input_shape=input_shape,
+                                     depth=self.depth,
+                                     nb_dense_block=self.nb_dense_block,
+                                     growth_rate=self.growth_rate,
+                                     nb_filter=self.nb_filter,
+                                     nb_layers_per_block=self.nb_layers_per_block,
+                                     bottleneck=self.bottleneck,
+                                     reduction=self.reduction,
+                                     dropout_rate=self.dropout_rate,
+                                     subsample_initial_block=self.subsample_initial_block,
+                                     weight_decay=self.weight_decay,
+                                     classes=1,
+                                     activation='sigmoid')
 
         return model

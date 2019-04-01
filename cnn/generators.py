@@ -123,7 +123,7 @@ class DataGeneratorC(keras.utils.Sequence):
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
+        x = np.empty([self.batch_size, 100, 100, self.arrival_time + 1])
         y = np.empty([self.batch_size], dtype=int)
 
         # print('__data_generation', indexes)
@@ -137,9 +137,9 @@ class DataGeneratorC(keras.utils.Sequence):
 
             h5f = h5py.File(filename, 'r')
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, :, :, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
+                x[i, :, :, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
             # Store class
             y[i] = int(row[2])
 
@@ -256,7 +256,7 @@ class DataGeneratorR(keras.utils.Sequence):
     def __data_generation(self, indexes):
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
+        x = np.empty([self.batch_size, 100, 100, self.arrival_time + 1])
         y = np.empty([self.batch_size, self.outcomes], dtype=float)
 
         # Generate data
@@ -267,9 +267,9 @@ class DataGeneratorR(keras.utils.Sequence):
             h5f = h5py.File(filename, 'r')
 
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, :, :, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
+                x[i, :, :, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
 
             # Store features
             if self.feature == 'energy':

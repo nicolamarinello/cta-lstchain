@@ -35,7 +35,6 @@ def step_decay(epoch):
 
 def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs):
-
     # hard coded parameters
     shuffle = True
     if red:
@@ -169,7 +168,7 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     if feature == 'xy':
         outcomes = 2
 
-    keras.backend.set_image_data_format('channels_first')
+    # keras.backend.set_image_data_format('channels_first')
     # avoid validation deadlock problem
     mp.set_start_method('spawn', force=True)
 
@@ -202,18 +201,37 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         resnet = ResNetI(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
     elif model_name == 'DenseNet':
-        depth = 64
-        growth_rate = 12
+        depth = 121
+        nb_dense_block = 4
+        growth_rate = 40
+        nb_filter = 64
+        nb_layers_per_block = [6, 12, 24, 16]
         bottleneck = True
+        subsample_initial_block = True
         reduction = 0.5
-        densenet = DenseNet(channels, img_rows, img_cols, outcomes, depth=depth, growth_rate=growth_rate,
-                            bottleneck=bottleneck, reduction=reduction)
+        densenet = DenseNet(channels,
+                            img_rows,
+                            img_cols,
+                            outcomes,
+                            depth=depth,
+                            nb_dense_block=nb_dense_block,
+                            growth_rate=growth_rate,
+                            nb_filter=nb_filter,
+                            nb_layers_per_block=nb_layers_per_block,
+                            bottleneck=bottleneck,
+                            subsample_initial_block=subsample_initial_block,
+                            reduction=reduction)
+
         model = densenet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
         hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'nb_dense_block: ' + str(nb_dense_block)
         hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'nb_filter: ' + str(nb_filter)
+        hype_print += '\n' + 'nb_layers_per_block: ' + str(nb_layers_per_block)
         hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
         hype_print += '\n' + 'Reduction: ' + str(reduction)
     else:
         print('Model name not valid')
