@@ -13,6 +13,7 @@ from keras import optimizers
 from keras.callbacks import LearningRateScheduler
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+from adabound import AdaBound
 from clr import OneCycleLR
 from generators import DataGeneratorR
 from losseshistory import LossHistoryR
@@ -55,7 +56,19 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     momentum = 0.9  # momentum
 
     # adam
+    a_lr = 0.001
+    a_beta_1 = 0.9
+    a_beta_2 = 0.999
+    a_epsilon = None
+    a_decay = 0.0
     amsgrad = True
+
+    # adabound
+    ab_lr = 1e-03
+    ab_final_lr = 0.1
+    ab_gamma = 1e-03
+    ab_weight_decay = 0
+    amsbound = False
 
     # reduce lr on plateau
     f_lrop = 0.1  # factor
@@ -134,7 +147,20 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         hype_print += '\n' + '-----------'
     elif opt == 'adam':
         hype_print += '\n' + '--- ADAM ---'
+        hype_print += '\n' + 'lr: ' + str(a_lr)
+        hype_print += '\n' + 'beta_1: ' + str(a_beta_1)
+        hype_print += '\n' + 'beta_2: ' + str(a_beta_2)
+        hype_print += '\n' + 'epsilon: ' + str(a_epsilon)
+        hype_print += '\n' + 'decay: ' + str(a_decay)
         hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
+        hype_print += '\n' + '------------'
+    elif opt == 'adabound':
+        hype_print += '\n' + '--- ADABOUND ---'
+        hype_print += '\n' + 'lr: ' + str(ab_lr)
+        hype_print += '\n' + 'final_lr: ' + str(ab_final_lr)
+        hype_print += '\n' + 'gamma: ' + str(ab_gamma)
+        hype_print += '\n' + 'weight_decay: ' + str(ab_weight_decay)
+        hype_print += '\n' + 'amsbound: ' + str(amsbound)
         hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
@@ -288,11 +314,13 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
         optimizer = sgd
     elif opt == 'adam':
-        adam = optimizers.Adam(amsgrad=amsgrad)
+        adam = optimizers.Adam(lr=a_lr, beta_1=a_beta_1, beta_2=a_beta_2, epsilon=a_epsilon, decay=a_decay,
+                               amsgrad=amsgrad)
         optimizer = adam
-    elif opt == 'adadelta':
-        adadelta = optimizers.Adadelta(lr=1.0, rho=0.95, epsilon=None, decay=0.0)
-        optimizer = adadelta
+    elif opt == 'adabound':
+        adabound = AdaBound(lr=ab_lr, final_lr=ab_final_lr, gamma=ab_gamma, weight_decay=ab_weight_decay,
+                            amsbound=False)
+        optimizer = adabound
 
     # reduce lr on plateau
     if lropf:

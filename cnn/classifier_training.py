@@ -15,30 +15,20 @@ from keras import optimizers
 from keras.callbacks import LearningRateScheduler
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+from adabound import AdaBound
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
-    ResNetF, ResNetG, ResNetH, DenseNet
+    ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
 from utils import get_all_files
 
 
-# learning rate schedule
-def step_decay(epoch):
-    current = K.eval(model.optimizer.lr)
-    lrate = current
-    if epoch == 35:
-        lrate = current / 10
-        print('Reduced learning rate by a factor 10')
-    return lrate
-
-
 def classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs):
-
     # hard coded parameters
     shuffle = True
     if red:
@@ -59,7 +49,19 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     momentum = 0.9  # momentum
 
     # adam
+    a_lr = 0.001
+    a_beta_1 = 0.9
+    a_beta_2 = 0.999
+    a_epsilon = None
+    a_decay = 0.0
     amsgrad = True
+
+    # adabound
+    ab_lr = 1e-03
+    ab_final_lr = 0.1
+    ab_gamma = 1e-03
+    ab_weight_decay = 0
+    amsbound = True
 
     # reduce lr on plateau
     f_lrop = 0.1  # factor
@@ -69,10 +71,10 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     mlr_lrop = lr / 100  # min lr
 
     # clr
-    max_lr = 0.032
+    max_lr = 3.16e-4
     e_per = 0.1
-    maximum_momentum = 0.95
-    minimum_momentum = 0.90
+    maximum_momentum = 0.99
+    minimum_momentum = 0.99
 
     # intra class weights
     # gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
@@ -144,7 +146,20 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + '-----------'
     elif opt == 'adam':
         hype_print += '\n' + '--- ADAM ---'
+        hype_print += '\n' + 'lr: ' + str(a_lr)
+        hype_print += '\n' + 'beta_1: ' + str(a_beta_1)
+        hype_print += '\n' + 'beta_2: ' + str(a_beta_2)
+        hype_print += '\n' + 'epsilon: ' + str(a_epsilon)
+        hype_print += '\n' + 'decay: ' + str(a_decay)
         hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
+        hype_print += '\n' + '------------'
+    elif opt == 'adabound':
+        hype_print += '\n' + '--- ADABOUND ---'
+        hype_print += '\n' + 'lr: ' + str(ab_lr)
+        hype_print += '\n' + 'final_lr: ' + str(ab_final_lr)
+        hype_print += '\n' + 'gamma: ' + str(ab_gamma)
+        hype_print += '\n' + 'weight_decay: ' + str(ab_weight_decay)
+        hype_print += '\n' + 'amsbound: ' + str(amsbound)
         hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
@@ -182,11 +197,9 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
 
     # keras.backend.set_image_data_format('channels_first')
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     if model_name == 'ClassifierV1':
-        class_v1 = ClassifierV1(img_rows, img_cols)
+        class_v1 = ClassifierV1(channels, img_rows, img_cols)
         model = class_v1.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
@@ -269,6 +282,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         growth_rate = 12
         bottleneck = True
         reduction = 0.5
+        # wd = 1e-5
         densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
                             reduction=reduction)
         model = densenet.get_model()
@@ -278,6 +292,14 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
         hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
         hype_print += '\n' + 'Reduction: ' + str(reduction)
+        # hype_print += '\n' + 'Weight decay: ' + str(wd)
+    elif model_name == 'ResNetFSE':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetFSE(channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     else:
         print('Model name not valid')
         sys.exit(1)
@@ -333,11 +355,13 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
         optimizer = sgd
     elif opt == 'adam':
-        adam = optimizers.Adam(amsgrad=amsgrad)
+        adam = optimizers.Adam(lr=a_lr, beta_1=a_beta_1, beta_2=a_beta_2, epsilon=a_epsilon, decay=a_decay,
+                               amsgrad=amsgrad)
         optimizer = adam
-    elif opt == 'adadelta':
-        adadelta = optimizers.Adadelta(lr=1.0, rho=0.95, epsilon=None, decay=0.0)
-        optimizer = adadelta
+    elif opt == 'adabound':
+        adabound = AdaBound(lr=ab_lr, final_lr=ab_final_lr, gamma=ab_gamma, weight_decay=ab_weight_decay,
+                            amsbound=False)
+        optimizer = adabound
 
     # reduce lr on plateau
     if lropf:
@@ -347,6 +371,16 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         callbacks.append(lrop)
 
     if sd:
+
+        # learning rate schedule
+        def step_decay(epoch):
+            current = K.eval(model.optimizer.lr)
+            lrate = current
+            if epoch == 99:
+                lrate = current / 10
+                print('Reduced learning rate by a factor 10')
+            return lrate
+
         stepd = LearningRateScheduler(step_decay)
         callbacks.append(stepd)
 
@@ -483,6 +517,9 @@ if __name__ == "__main__":
     # we = FLAGS.iweights
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs)

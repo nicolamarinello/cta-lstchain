@@ -1,16 +1,17 @@
 import argparse
 import datetime
+import multiprocessing as mp
 import random
 from os import mkdir
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
 import numpy as np
 from keras import backend as K
 from keras import optimizers
+from keras.utils.data_utils import OrderedEnqueuer
+from keras.utils.generic_utils import Progbar
 
+from classifiers import DenseNet
 from classifiers import ResNetB
 from clr import LRFinder
 from generators import DataGeneratorC
@@ -28,36 +29,76 @@ if __name__ == "__main__":
 
     FLAGS, unparsed = parser.parse_known_args()
 
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
+
     # cmd line parameters
     folders = FLAGS.dirs
     workers = FLAGS.workers
     phase = FLAGS.phase
 
     # hard coded parameters
-    batch_size = 128
+    batch_size = 64
     wd = 1e-7  # weight decay
+
+    img_rows, img_cols = 100, 100
+    channels = 2
 
     h5files = get_all_files(folders)
     random.shuffle(h5files)
 
     n_files = len(h5files)
-    n_train = int(np.floor(n_files * 0.8))
+    val_per = 0.2
+    tv_idx = int(n_files * (1 - val_per))
+    training_files = h5files[:tv_idx]
+    validation_files = h5files[tv_idx:]
 
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorC(h5files[0:n_train], batch_size=batch_size, shuffle=True)
+    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=True, shuffle=True)
 
     print('Building validation generator...')
-    validation_generator = DataGeneratorC(h5files[n_train:], batch_size=batch_size, shuffle=False)
+    validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=True, shuffle=True)
 
     print('Getting validation data...')
-    X_val, Y_val = validation_generator.get_val()
+    steps_done = 0
+    steps = int(len(validation_generator)*0.5)      # take half of the available validation data
+
+    enqueuer = OrderedEnqueuer(validation_generator, use_multiprocessing=True)
+    enqueuer.start(workers=workers, max_queue_size=10)
+    output_generator = enqueuer.get()
+
+    progbar = Progbar(target=steps)
+
+    X_val = []
+    Y_val = []
+
+    while steps_done < steps:
+        generator_output = next(output_generator)
+        x, y = generator_output
+
+        X_val.append(x)
+        Y_val.append(y)
+
+        steps_done += 1
+        progbar.update(steps_done)
+
+    X_val = np.array(X_val).reshape((steps*batch_size, img_rows, img_cols, channels))
+    Y_val = np.array(Y_val).reshape((steps*batch_size))
+
+    print('XVal shapes:', X_val.shape)
+    print('YVal shapes:', Y_val.shape)
 
     if phase == 'lr':
         # lr finder
-        model_name = 'ResNetE'
-        resnet = ResNetB(100, 100, 0)
-        model = resnet.get_model()  # set weight decay
+        model_name = 'DenseNet'
+        depth = 64
+        growth_rate = 12
+        bottleneck = True
+        reduction = 0.5
+        densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
+                            reduction=reduction, weight_decay=0)
+        model = densenet.get_model()
 
         # create a folder to keep model & results
         now = datetime.datetime.now()
@@ -68,8 +109,8 @@ if __name__ == "__main__":
 
         lrf = LRFinder(num_samples=len(training_generator) * batch_size - 1,
                        batch_size=batch_size,
-                       minimum_lr=1e-4,
-                       maximum_lr=2,
+                       minimum_lr=1e-6,
+                       maximum_lr=1,
                        validation_data=(X_val, Y_val),
                        lr_scale='exp',
                        save_dir=root_dir + '/weights/')
@@ -103,8 +144,8 @@ if __name__ == "__main__":
 
     if phase == 'momentum':
 
-        model_dir = '/root/ctasoft/cta-lstchain/cnn/ResNetB_2019-02-16_21-51'  # <-------------------set model dir here
-        max_lr = 0.016
+        model_dir = '/home/nmarinel/ctasoft/cta-lstchain/cnn/DenseNet_2019-04-02_19-56'  # <---------set model dir here
+        max_lr = 3.16e-4
         min_lr = max_lr / 10
 
         MOMENTUMS = [0.8, 0.9, 0.95, 0.99]
@@ -115,12 +156,20 @@ if __name__ == "__main__":
             K.clear_session()
 
             # lr finder
-            model_name = 'ResNetB'
-            resnet = ResNetB(100, 100, 0)
-            model = resnet.get_model()  # set weight decay
+            model_name = 'DenseNet'
+            depth = 64
+            growth_rate = 12
+            bottleneck = True
+            reduction = 0.5
+            densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate,
+                                bottleneck=bottleneck,
+                                reduction=reduction, weight_decay=0)
+            model = densenet.get_model()
 
             # lr finder
-            lrf = LRFinder(num_samples=(len(training_generator) + 1) * batch_size,
+            lrf = LRFinder(num_samples=(int(len(training_generator)*0.1) + 1) * batch_size,
+                           # use this one to use the entire dataset
+                           # num_samples=(len(training_generator) + 1) * batch_size,
                            batch_size=batch_size,
                            minimum_lr=min_lr,
                            maximum_lr=max_lr,
@@ -136,6 +185,8 @@ if __name__ == "__main__":
             model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
 
             model.fit_generator(generator=training_generator,
+                                # it can be commented if you want to use the entire dataset
+                                steps_per_epoch=int(len(training_generator)*0.1),
                                 validation_data=(X_val, Y_val),
                                 epochs=1,
                                 verbose=1,
@@ -159,16 +210,16 @@ if __name__ == "__main__":
 
     if phase == 'wd':
 
-        model_dir = '/root/ctasoft/cta-lstchain/cnn/ResNetB_2019-02-16_21-51'  # <-------------------set model dir here
-        max_lr = 0.016
+        model_dir = '/home/nmarinel/ctasoft/cta-lstchain/cnn/DenseNet_2019-04-02_19-56'  # <---------set model dir here
+        max_lr = 3.16e-4
         min_lr = max_lr / 10
-        momentum = 0.95
+        momentum = 0.99
 
         # INITIAL WEIGHT DECAY FACTORS
-        WEIGHT_DECAY_FACTORS = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
+        # WEIGHT_DECAY_FACTORS = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
 
         # FINEGRAINED WEIGHT DECAY FACTORS
-        # WEIGHT_DECAY_FACTORS = [1e-7, 3e-7, 3e-6]
+        WEIGHT_DECAY_FACTORS = [1e-3, 1e-4, 1e-5]
 
         for weight_decay in WEIGHT_DECAY_FACTORS:
             print('WEIGHT_DECAY:', weight_decay)
@@ -176,12 +227,20 @@ if __name__ == "__main__":
             K.clear_session()
 
             # lr finder
-            model_name = 'ResNetB'
-            resnet = ResNetB(100, 100, weight_decay)
-            model = resnet.get_model()  # set weight decay
+            model_name = 'DenseNet'
+            depth = 64
+            growth_rate = 12
+            bottleneck = True
+            reduction = 0.5
+            densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate,
+                                bottleneck=bottleneck,
+                                reduction=reduction, weight_decay=weight_decay)
+            model = densenet.get_model()
 
             # lr finder
-            lrf = LRFinder(num_samples=(len(training_generator) + 1) * batch_size,
+            lrf = LRFinder(num_samples=(int(len(training_generator)*0.1) + 1) * batch_size,
+                           # use this one to use the entire dataset
+                           # num_samples=(len(training_generator) + 1) * batch_size,
                            batch_size=batch_size,
                            minimum_lr=min_lr,
                            maximum_lr=max_lr,
@@ -196,6 +255,8 @@ if __name__ == "__main__":
             model.compile(optimizer=sgd, loss='binary_crossentropy', metrics=['accuracy'])
 
             model.fit_generator(generator=training_generator,
+                                # it can be commented if you want to use the entire dataset
+                                steps_per_epoch=int(len(training_generator) * 0.1),
                                 validation_data=(X_val, Y_val),
                                 epochs=1,
                                 verbose=1,
