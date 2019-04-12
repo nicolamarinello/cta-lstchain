@@ -4,7 +4,7 @@ import os
 import h5py
 import keras
 import numpy as np
-from ctapipe.image import hillas_parameters, tailcuts_clean
+from ctapipe.image import hillas_parameters, tailcuts_clean, leakage
 from ctapipe.image.timing_parameters import timing_parameters
 from ctapipe.instrument import CameraGeometry
 from astropy import units as u
@@ -721,7 +721,7 @@ class DataGeneratorRF(keras.utils.Sequence):
         energy = np.empty([self.batch_size, 1], dtype=float)
         altaz = np.empty([self.batch_size, 2], dtype=float)
         tgradient = np.empty([self.batch_size, 1], dtype=float)
-        hillas = np.empty([self.batch_size, 6], dtype=float)
+        hillas = np.empty([self.batch_size, 10], dtype=float)
 
         boundary, picture, min_neighbors = self.cleaning_level['LSTCam']
 
@@ -744,6 +744,9 @@ class DataGeneratorRF(keras.utils.Sequence):
             )
 
             h = hillas_parameters(self.geom[clean], charge[clean])
+            l = leakage(self.geom, charge, clean)
+
+            # miss intercept and n of islands
 
             hillas[i, 0] = h['intensity']
             hillas[i, 1] = h['width'] / u.m
@@ -751,6 +754,10 @@ class DataGeneratorRF(keras.utils.Sequence):
             hillas[i, 3] = hillas[i, 1] / hillas[i, 2]  # h['wl']
             hillas[i, 4] = h['phi'] / u.rad
             hillas[i, 5] = h['psi'] / u.rad
+            hillas[i, 6] = h['skewness']
+            hillas[i, 7] = h['kurtosis']
+            hillas[i, 8] = h['r'] / u.m
+            hillas[i, 9] = l['leakage1_intensity']
 
             altaz[i, 0] = h5f['LST/delta_alt'][:][int(row[1])]
             altaz[i, 1] = h5f['LST/delta_az'][:][int(row[1])]
