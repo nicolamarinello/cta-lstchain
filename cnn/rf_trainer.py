@@ -23,8 +23,8 @@ if __name__ == "__main__":
     training_generator = DataGeneratorRF(train_files, batch_size=32, shuffle=True)
     test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=False)
 
-    train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intensity', 'width', 'length', 'wl', 'phi',
-                  'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity']
+    train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intercept', 'intensity', 'width', 'length',
+                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity', 'n_islands']
     pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
 
     print('Retrieving training data...')
@@ -145,7 +145,10 @@ if __name__ == "__main__":
                 'skewness',
                 'kurtosis',
                 'r',
-                'leakage1_intensity']
+                'leakage1_intensity',
+                'n_islands',
+                'slope',
+                'intercept']
 
     print("Given features: ", features)
     print("Number of events for training: ", train_df.shape[0])
