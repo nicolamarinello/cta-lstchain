@@ -1,5 +1,2 @@
-from .containers import DL1ParametersContainer
-
-all = [
-    'DL1ParametersContainer',
-]
+from .config import *
+from .lstcontainers import *
