@@ -1,4 +1,5 @@
 import keras
+import keras_contrib.applications
 from keras import backend as K
 from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization, \
     Activation, Input, Reshape, multiply, GlobalAveragePooling2D, Permute
@@ -1380,7 +1381,7 @@ class DenseNet:
 
     def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
                  nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4,
-                 subsample_initial_block=False):
+                 subsample_initial_block=False, include_top=True):
         self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
@@ -1394,6 +1395,7 @@ class DenseNet:
         self.dropout_rate = dropout_rate
         self.weight_decay = weight_decay
         self.subsample_initial_block = subsample_initial_block
+        self.include_top = include_top
 
     def get_model(self):
         input_shape = (self.img_rows, self.img_cols, self.channels)
@@ -1410,7 +1412,8 @@ class DenseNet:
                                      subsample_initial_block=self.subsample_initial_block,
                                      weight_decay=self.weight_decay,
                                      classes=1,
-                                     activation='sigmoid')
+                                     activation='sigmoid',
+                                     include_top=self.include_top)
 
         return model
 
@@ -1605,5 +1608,134 @@ class ResNetFSE:
         y = Flatten()(x)
         outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
         model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
+
+class ResNet18:
+
+    def __init__(self, channels, img_rows, img_cols, dropout):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.dropout = dropout
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        # ResNet50
+        model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
+                                                         block='basic',
+                                                         dropout=self.dropout,
+                                                         repetitions=[2, 2, 2, 2],
+                                                         residual_unit='v1',
+                                                         classes=1,
+                                                         activation='sigmoid')
+
+        return model
+
+
+class ResNet34:
+
+    def __init__(self, channels, img_rows, img_cols, dropout):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.dropout = dropout
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        # ResNet50
+        model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
+                                                         block='basic',
+                                                         dropout=self.dropout,
+                                                         repetitions=[3, 4, 6, 3],
+                                                         residual_unit='v1',
+                                                         classes=1,
+                                                         activation='sigmoid')
+
+        return model
+
+
+class ResNet50:
+
+    def __init__(self, channels, img_rows, img_cols, dropout):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.dropout = dropout
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        # ResNet50
+        model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
+                                                         block='bottleneck',
+                                                         dropout=self.dropout,
+                                                         repetitions=[3, 4, 6, 3],
+                                                         classes=1,
+                                                         activation='sigmoid')
+
+        return model
+
+
+class ResNet101:
+
+    def __init__(self, channels, img_rows, img_cols, dropout):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.dropout = dropout
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        # ResNet50
+        model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
+                                                         block='bottleneck',
+                                                         dropout=self.dropout,
+                                                         repetitions=[3, 4, 23, 3],
+                                                         classes=1,
+                                                         activation='sigmoid')
+
+        return model
+
+
+class ResNet152:
+
+    def __init__(self, channels, img_rows, img_cols, dropout):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.dropout = dropout
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        # ResNet50
+        model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
+                                                         block='bottleneck',
+                                                         dropout=self.dropout,
+                                                         repetitions=[3, 8, 36, 3],
+                                                         classes=1,
+                                                         activation='sigmoid')
+
+        return model
+
+
+class NASNetLarge:
+
+    def __init__(self, channels, img_rows, img_cols):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+
+    def get_model(self):
+        model = keras_contrib.applications.nasnet.NASNetLarge(input_shape=(self.img_rows, self.img_cols, self.channels),
+                                                              classes=1,
+                                                              activation='sigmoid',
+                                                              include_top=False,
+                                                              weights=None)
 
         return model

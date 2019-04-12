@@ -765,7 +765,8 @@ class DataGeneratorRF(keras.utils.Sequence):
             )
 
             # TODO: check if timing[0] is correct
-            tgradient[i] = timing[0]
+            # print(timing)
+            tgradient[i] = timing['slope'] * u.m
 
             y[i] = int(row[2])
 

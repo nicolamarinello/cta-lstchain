@@ -2,6 +2,7 @@ import argparse
 import datetime
 import multiprocessing as mp
 import pickle
+import os
 import random
 import sys
 from os import listdir
@@ -15,20 +16,29 @@ from keras import optimizers
 from keras.callbacks import LearningRateScheduler
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+
 from adabound import AdaBound
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
-from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
-    ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE
+
 from clr import OneCycleLR
 from generators import DataGeneratorC
 from losseshistory import LossHistoryC
 from utils import get_all_files
 
+from classifier_selector import select_classifier
+
 
 def classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs):
+
+    # remove semaphore warnings
+    os.environ["PYTHONWARNINGS"] = "ignore:semaphore_tracker:UserWarning"
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
+
     # hard coded parameters
     shuffle = True
     if red:
@@ -45,15 +55,16 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
 
     # sgd
     lr = 0.1  # lr
-    decay = 0  # decay
+    decay = 1e-4  # decay
     momentum = 0.9  # momentum
-
+    nesterov = True
+    
     # adam
     a_lr = 0.001
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
-    a_decay = 0.0
+    a_decay = 0
     amsgrad = True
 
     # adabound
@@ -65,7 +76,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
 
     # reduce lr on plateau
     f_lrop = 0.1  # factor
-    p_lrop = 25  # patience
+    p_lrop = 15  # patience
     md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
     mlr_lrop = lr / 100  # min lr
@@ -143,6 +154,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
         hype_print += '\n' + 'Learning rate:' + str(lr)
         hype_print += '\n' + 'Decay: ' + str(decay)
         hype_print += '\n' + 'Momentum: ' + str(momentum)
+        hype_print += '\n' + 'Nesterov: ' + str(nesterov)
         hype_print += '\n' + '-----------'
     elif opt == 'adam':
         hype_print += '\n' + '--- ADAM ---'
@@ -198,111 +210,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
 
     # keras.backend.set_image_data_format('channels_first')
 
-    if model_name == 'ClassifierV1':
-        class_v1 = ClassifierV1(channels, img_rows, img_cols)
-        model = class_v1.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ClassifierV2':
-        class_v2 = ClassifierV2(img_rows, img_cols)
-        model = class_v2.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ClassifierV3':
-        class_v3 = ClassifierV3(img_rows, img_cols)
-        model = class_v3.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNet20V1':
-        resnet = ResNet(img_rows, img_cols)
-        model = resnet.get_model(1, 3)
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNet32V1':
-        resnet = ResNet(img_rows, img_cols)
-        model = resnet.get_model(1, 5)
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetA':
-        resnet = ResNetA(img_rows, img_cols)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetB':
-        wd = 3e-6
-        print('Weight decay: ', wd)
-        resnet = ResNetB(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetC':
-        wd = 0
-        print('Weight decay: ', wd)
-        resnet = ResNetC(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetD':
-        wd = 0
-        print('Weight decay: ', wd)
-        resnet = ResNetD(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetE':
-        wd = 0
-        print('Weight decay: ', wd)
-        resnet = ResNetE(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetF':
-        wd = 1e-4
-        hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetF(channels, img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetG':
-        wd = 0
-        print('Weight decay: ', wd)
-        resnet = ResNetG(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetH':
-        wd = 1e-3
-        print('Weight decay: ', wd)
-        resnet = ResNetH(img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'DenseNet':
-        depth = 64
-        growth_rate = 12
-        bottleneck = True
-        reduction = 0.5
-        # wd = 1e-5
-        densenet = DenseNet(channels, img_rows, img_cols, depth=depth, growth_rate=growth_rate, bottleneck=bottleneck,
-                            reduction=reduction)
-        model = densenet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-        hype_print += '\n' + 'Depth: ' + str(depth)
-        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
-        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
-        hype_print += '\n' + 'Reduction: ' + str(reduction)
-        # hype_print += '\n' + 'Weight decay: ' + str(wd)
-    elif model_name == 'ResNetFSE':
-        wd = 1e-4
-        hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetFSE(channels, img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    else:
-        print('Model name not valid')
-        sys.exit(1)
+    model, hype_print = select_classifier(model_name, hype_print, channels, img_rows, img_cols)
 
     hype_print += '\n' + '========================================================================================='
 
@@ -352,7 +260,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     # sgd
     optimizer = None
     if opt == 'sgd':
-        sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
+        sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=nesterov)
         optimizer = sgd
     elif opt == 'adam':
         adam = optimizers.Adam(lr=a_lr, beta_1=a_beta_1, beta_2=a_beta_2, epsilon=a_epsilon, decay=a_decay,
@@ -517,9 +425,6 @@ if __name__ == "__main__":
     # we = FLAGS.iweights
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
-
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs)

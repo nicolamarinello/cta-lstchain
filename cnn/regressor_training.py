@@ -3,6 +3,7 @@ import datetime
 import multiprocessing as mp
 import pickle
 import random
+import subprocess
 import sys
 from os import listdir
 from os import mkdir
@@ -195,8 +196,6 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         outcomes = 2
 
     # keras.backend.set_image_data_format('channels_first')
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     if model_name == 'RegressorV2':
         class_v2 = RegressorV2(channels, img_rows, img_cols)
@@ -471,6 +470,14 @@ if __name__ == "__main__":
     feature = FLAGS.feature
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
+
+    # remove semaphore warnings
+    bashCommand = "export PYTHONWARNINGS='ignore:semaphore_tracker:UserWarning'"
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
 
     regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs)

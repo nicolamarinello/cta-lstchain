@@ -5,6 +5,7 @@ import pandas as pd
 from keras.models import load_model
 from keras.utils.data_utils import OrderedEnqueuer
 from keras.utils.generic_utils import Progbar
+from tabulate import tabulate
 
 from generators import DataGeneratorChain
 from utils import get_all_files
@@ -41,13 +42,13 @@ if __name__ == "__main__":
     test_generator = DataGeneratorChain(h5files, batch_size=batch_size, arrival_time=time, shuffle=True)
 
     # retrieve ground truth
-    print('Retrieving ground truth...')
+    print('Inference on data...')
     steps_done = 0
     steps = len(test_generator)
-    steps = 2
+    # steps = 2
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
-    enqueuer.start(workers=6, max_queue_size=10)
+    enqueuer.start(workers=4, max_queue_size=10)
     output_generator = enqueuer.get()
 
     progbar = Progbar(target=steps)
@@ -89,5 +90,11 @@ if __name__ == "__main__":
     cols = ['Label', 'gammanes', 'Intensity', 'mc_energy', 'mc_energy_reco', 'd_alt', 'd_az', 'd_alt_reco',
             'd_az_reco']
     df = pd.DataFrame(table, columns=cols)
+
+    with open('lstch_analysis.txt', 'w') as f:
+        print('CNN LST Chain - Full analysis\n', file=f)
+        print(tabulate(df, headers='keys', tablefmt='psql'), file=f)
+
+    df.to_pickle('lstch_analysis.pkl')
 
     print(df)
