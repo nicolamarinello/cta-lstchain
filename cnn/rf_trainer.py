@@ -24,7 +24,7 @@ if __name__ == "__main__":
     test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=False)
 
     train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intensity', 'width', 'length', 'wl', 'phi',
-                  'psi']
+                  'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity']
     pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
 
     print('Retrieving training data...')
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     progbar = Progbar(target=steps)
 
-    table = np.array([]).reshape(0, 11)
+    table = np.array([]).reshape(0, len(train_cols))
 
     while steps_done < steps:
         generator_output = next(output_generator)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     progbar = Progbar(target=steps)
 
-    table = np.array([]).reshape(0, 11)
+    table = np.array([]).reshape(0, len(train_cols))
 
     while steps_done < steps:
         generator_output = next(output_generator)
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     """
 
     random_forest_classifier_args = {'max_depth': 2,
-                                     'min_samples_leaf': 5,
+                                     'min_samples_leaf': 10,
                                      'n_jobs': 4,
                                      'n_estimators': 50,
                                      'criterion': 'gini',
@@ -141,7 +141,11 @@ if __name__ == "__main__":
                 'length',
                 'wl',
                 'phi',
-                'psi']
+                'psi',
+                'skewness',
+                'kurtosis',
+                'r',
+                'leakage1_intensity']
 
     print("Given features: ", features)
     print("Number of events for training: ", train_df.shape[0])
