@@ -2,12 +2,14 @@ import argparse
 import datetime
 import multiprocessing as mp
 import pickle
+import os
 import random
-import subprocess
 import sys
 from os import listdir
 from os import mkdir
 from os.path import isfile, join
+
+from regressor_selector import regressor_selector
 
 import keras
 from keras import optimizers
@@ -21,26 +23,22 @@ from losseshistory import LossHistoryR
 from regressor_test_plots import test_plots
 from regressor_tester import tester
 from regressor_training_plots import train_plots
-from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet
 from utils import get_all_files
-
-
-# learning rate schedule
-def step_decay(epoch):
-    current = K.eval(model.optimizer.lr)
-    lrate = current
-    if epoch == 35:
-        lrate = current / 10
-        print('Reduced learning rate by a factor 10')
-    return lrate
 
 
 def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs):
+
+    # remove semaphore warnings
+    os.environ["PYTHONWARNINGS"] = "ignore:semaphore_tracker:UserWarning"
+
+    # avoid validation deadlock problem
+    mp.set_start_method('spawn', force=True)
+
     # hard coded parameters
     shuffle = True
-    if red:
-        shuffle = False
+    # if red:
+    #    shuffle = False
 
     img_rows, img_cols = 100, 100
     channels = 1
@@ -53,15 +51,16 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
 
     # sgd
     lr = 0.01  # lr
-    decay = 0  # decay
+    decay = 1e-4  # decay
     momentum = 0.9  # momentum
+    nesterov = True
 
     # adam
     a_lr = 0.001
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
-    a_decay = 0.0
+    a_decay = 0
     amsgrad = True
 
     # adabound
@@ -145,6 +144,7 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         hype_print += '\n' + 'Learning rate:' + str(lr)
         hype_print += '\n' + 'Decay: ' + str(decay)
         hype_print += '\n' + 'Momentum: ' + str(momentum)
+        hype_print += '\n' + 'Nesterov: ' + str(nesterov)
         hype_print += '\n' + '-----------'
     elif opt == 'adam':
         hype_print += '\n' + '--- ADAM ---'
@@ -171,6 +171,8 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         hype_print += '\n' + 'Cool down:' + str(cd_lrop)
         hype_print += '\n' + 'Min lr: ' + str(mlr_lrop)
         hype_print += '\n' + '----------------------------'
+    if sd:
+        hype_print += '\n' + '--- Step decay ---'
     if clr:
         hype_print += '\n' + '--- CLR ---'
         hype_print += '\n' + 'max_lr: ' + str(max_lr)
@@ -197,70 +199,7 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
 
     # keras.backend.set_image_data_format('channels_first')
 
-    if model_name == 'RegressorV2':
-        class_v2 = RegressorV2(channels, img_rows, img_cols)
-        model = class_v2.get_model()
-    elif model_name == 'RegressorV3':
-        class_v3 = RegressorV3(img_rows, img_cols)
-        model = class_v3.get_model()
-    elif model_name == 'ResNetF':
-        wd = 1e-5
-        hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetF(outcomes, channels, img_rows, img_cols, wd)
-        model = resnet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-    elif model_name == 'ResNetH':
-        wd = 0
-        hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetH(outcomes, channels, img_rows, img_cols, wd)
-        model = resnet.get_model()
-    elif model_name == 'ResNetXt':
-        cardinality = 32
-        hype_print += '\n' + 'Cardinality: ' + str(cardinality)
-        resnet = ResNetXt(outcomes, channels, img_rows, img_cols)
-        model = resnet.get_model(cardinality=cardinality)
-    elif model_name == 'ResNetI':
-        wd = 1e-4
-        hype_print += '\n' + 'Weight decay: ' + str(wd)
-        resnet = ResNetI(outcomes, channels, img_rows, img_cols, wd)
-        model = resnet.get_model()
-    elif model_name == 'DenseNet':
-        depth = 121
-        nb_dense_block = 4
-        growth_rate = 40
-        nb_filter = 64
-        nb_layers_per_block = [6, 12, 24, 16]
-        bottleneck = True
-        subsample_initial_block = True
-        reduction = 0.5
-        densenet = DenseNet(channels,
-                            img_rows,
-                            img_cols,
-                            outcomes,
-                            depth=depth,
-                            nb_dense_block=nb_dense_block,
-                            growth_rate=growth_rate,
-                            nb_filter=nb_filter,
-                            nb_layers_per_block=nb_layers_per_block,
-                            bottleneck=bottleneck,
-                            subsample_initial_block=subsample_initial_block,
-                            reduction=reduction)
-
-        model = densenet.get_model()
-        params = model.count_params()
-        hype_print += '\n' + 'Model params: ' + str(params)
-        hype_print += '\n' + 'Depth: ' + str(depth)
-        hype_print += '\n' + 'nb_dense_block: ' + str(nb_dense_block)
-        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
-        hype_print += '\n' + 'nb_filter: ' + str(nb_filter)
-        hype_print += '\n' + 'nb_layers_per_block: ' + str(nb_layers_per_block)
-        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
-        hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
-        hype_print += '\n' + 'Reduction: ' + str(reduction)
-    else:
-        print('Model name not valid')
-        sys.exit(1)
+    model, hype_print = regressor_selector(model_name, hype_print, channels, img_rows, img_cols, outcomes)
 
     hype_print += '\n' + '========================================================================================='
 
@@ -310,7 +249,7 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     # sgd
     optimizer = None
     if opt == 'sgd':
-        sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=True)
+        sgd = optimizers.SGD(lr=lr, decay=decay, momentum=momentum, nesterov=nesterov)
         optimizer = sgd
     elif opt == 'adam':
         adam = optimizers.Adam(lr=a_lr, beta_1=a_beta_1, beta_2=a_beta_2, epsilon=a_epsilon, decay=a_decay,
@@ -329,6 +268,16 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         callbacks.append(lrop)
 
     if sd:
+
+        # learning rate schedule
+        def step_decay(epoch):
+            current = K.eval(model.optimizer.lr)
+            lrate = current
+            if epoch == 99:
+                lrate = current / 10
+                print('Reduced learning rate by a factor 10')
+            return lrate
+
         stepd = LearningRateScheduler(step_decay)
         callbacks.append(stepd)
 
@@ -470,14 +419,6 @@ if __name__ == "__main__":
     feature = FLAGS.feature
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
-
-    # remove semaphore warnings
-    bashCommand = "export PYTHONWARNINGS='ignore:semaphore_tracker:UserWarning'"
-    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    output, error = process.communicate()
-
-    # avoid validation deadlock problem
-    mp.set_start_method('spawn', force=True)
 
     regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs)

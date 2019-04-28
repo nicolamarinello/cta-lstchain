@@ -115,8 +115,7 @@ class ResNetF:
                           strides=strides,
                           padding='same',
                           kernel_initializer='he_normal',
-                          kernel_regularizer=l2(wd),
-                          data_format="channels_first")
+                          kernel_regularizer=l2(wd))
 
             x = inputs
             if conv_first:
@@ -139,7 +138,7 @@ class ResNetF:
         Non-trainable params: 2,456     
         """
 
-        input_shape = (self.channels, self.img_rows, self.img_cols)
+        input_shape = (self.img_rows, self.img_cols, self.channels)
 
         inputs = Input(shape=input_shape)  # output (1, 100, 100)
         y = resnet_layer(inputs=inputs, num_filters=16, strides=1)  # output (16, 100, 100)
@@ -215,7 +214,7 @@ class ResNetF:
         x = keras.layers.add([x, y])
         y = Activation('relu')(x)
 
-        x = AveragePooling2D(pool_size=2, data_format='channels_first')(y)
+        x = AveragePooling2D(pool_size=2)(y)
         y = Flatten()(x)
         outputs = Dense(self.outcomes, activation='linear', kernel_initializer='he_normal')(y)
         model = Model(inputs=inputs, outputs=outputs)

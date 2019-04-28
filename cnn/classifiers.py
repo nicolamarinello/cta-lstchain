@@ -1674,6 +1674,7 @@ class ResNet50:
                                                          block='bottleneck',
                                                          dropout=self.dropout,
                                                          repetitions=[3, 4, 6, 3],
+                                                         residual_unit='v2',
                                                          classes=1,
                                                          activation='sigmoid')
 
@@ -1691,11 +1692,12 @@ class ResNet101:
     def get_model(self):
         input_shape = (self.img_rows, self.img_cols, self.channels)
 
-        # ResNet50
+        # ResNet101
         model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
                                                          block='bottleneck',
                                                          dropout=self.dropout,
                                                          repetitions=[3, 4, 23, 3],
+                                                         residual_unit='v2',
                                                          classes=1,
                                                          activation='sigmoid')
 
@@ -1713,11 +1715,12 @@ class ResNet152:
     def get_model(self):
         input_shape = (self.img_rows, self.img_cols, self.channels)
 
-        # ResNet50
+        # ResNet152
         model = keras_contrib.applications.resnet.ResNet(input_shape=input_shape,
                                                          block='bottleneck',
                                                          dropout=self.dropout,
                                                          repetitions=[3, 8, 36, 3],
+                                                         residual_unit='v2',
                                                          classes=1,
                                                          activation='sigmoid')
 

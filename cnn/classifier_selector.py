@@ -251,35 +251,35 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet18':
-        dropout = 0.2
+        dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet18(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet34':
-        dropout = 0.2
+        dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet34(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet50':
-        dropout = 0.2
+        dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet50(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet101':
-        dropout = 0.2
+        dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet101(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet152':
-        dropout = 0.2
+        dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet152(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
