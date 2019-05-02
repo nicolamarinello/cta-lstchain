@@ -4,7 +4,7 @@ from regressor_training import regressor_training_main
 
 if __name__ == "__main__":
 
-    which = 'paper-resnetf'
+    which = 'paper-densenet'
 
     if which == 'resnets':
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         opt = 'adam'
         validation = True
         reduction = 1
-        lrop = True
+        lrop = False
         sd = False
         clr = False
         es = False

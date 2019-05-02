@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+from sklearn.metrics import mean_absolute_error
 
 
 def test_plots(pkl, feature):
@@ -85,6 +86,16 @@ def test_plots(pkl, feature):
         fig.tight_layout()
         plt.savefig(folder + '/energy_res.eps', format='eps', transparent=False)
 
+        # save energy mus and sigmas
+        np.savez(folder + '/mus_sigmas.npz', mus=mus, sigmas=sigmas, bin_centers=bin_centers)
+
+        mae_energy = mean_absolute_error(df['GroundTruth'], df['Predicted'])
+
+        # writing summary on file
+        f = open(folder + '/mae.txt', 'w')
+        f.write('MAE: ' + str(mae_energy))
+        f.close()
+
     elif feature == 'xy':
 
         n_rows = 6  # how many rows figures
@@ -153,6 +164,17 @@ def test_plots(pkl, feature):
         plt.title('Angular resolution')
         fig.tight_layout()
         plt.savefig(folder + '/angular_res.eps', format='eps', transparent=False)
+
+        # save angular resolution
+        np.savez(folder + '/ang_reso_plt.npz', sqrttheta268=np.sqrt(theta2_68), bin_centers=bin_centers)
+
+        mae_direction = mean_absolute_error([df['src_x'], df['src_y']],
+                                            [df['src_x_rec'], df['src_y_rec']])
+
+        # writing summary on file
+        f = open(folder + '/mae.txt', 'w')
+        f.write('MAE: ' + str(mae_direction))
+        f.close()
 
     print('Plots done')
 

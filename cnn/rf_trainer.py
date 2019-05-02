@@ -10,6 +10,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve, mean_absolute_error
 
 from generators import DataGeneratorRF
+from lstchain.reco.utils import disp_to_pos
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -27,8 +28,9 @@ if __name__ == "__main__":
     test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=False)
 
     train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intercept', 'intensity', 'width', 'length',
-                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity', 'n_islands']
-    pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
+                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity', 'n_islands', 'x', 'y',
+                  'disp_dx', 'disp_dy']
+    pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco', 'disp_dx_reco', 'disp_dy_reco']
 
     # ------------------------------- TRAINING DATA ---------------------------- #
 
@@ -47,9 +49,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas = generator_output
+        y, energy, altaz, tgradient, hillas, disp = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -67,10 +69,10 @@ if __name__ == "__main__":
 
     print('Retrieving testing data...')
     steps_done = 0
-    steps = len(training_generator)
+    steps = len(test_generator)
     # steps = 1000
 
-    enqueuer = OrderedEnqueuer(training_generator, use_multiprocessing=True)
+    enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
     output_generator = enqueuer.get()
 
@@ -80,9 +82,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas = generator_output
+        y, energy, altaz, tgradient, hillas, disp = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -170,6 +172,11 @@ if __name__ == "__main__":
 
     # ------------------------------- REGRESSION ---------------------------- #
 
+    # GET RID OF PROTONS BEFORE REGRESSION OPERATIONS
+
+    train_df = train_df[train_df['label'] == 1]
+    test_df = test_df[test_df['label'] == 1]
+
     """
     Trains two Random Forest regressors for Energy and disp_norm
     reconstruction respectively. Returns the trained RF.
@@ -226,14 +233,13 @@ if __name__ == "__main__":
     print("Training Random Forest Regressor for disp_norm Reconstruction...")
 
     reg_disp = RandomForestRegressor(**random_forest_regressor_args)
-    reg_disp.fit(train_df[features], train_df[['d_alt', 'd_az']])
+    reg_disp.fit(train_df[features], train_df[['disp_dx', 'disp_dy']])
 
     print("Random Forest for direction reco trained!")
 
-    altaz = reg_disp.predict(test_df[features])
+    dxdy = reg_disp.predict(test_df[features])
 
-    test_df['d_alt_reco'] = altaz[:, 0]
-    test_df['d_az_reco'] = altaz[:, 1]
+    test_df['d_alt_reco'], test_df['d_az_reco'] = disp_to_pos(dxdy[:, 0], dxdy[:, 1], test_df['x'], test_df['y'])
 
     mae_direction = mean_absolute_error([test_df['d_alt'], test_df['d_az']],
                                         [test_df['d_alt_reco'], test_df['d_az_reco']])
@@ -327,6 +333,9 @@ if __name__ == "__main__":
     fig.tight_layout()
     plt.savefig(root_dir + '/energy_res.png', format='png', transparent=False)
 
+    # save energy mus and sigmas
+    np.savez(root_dir + '/mus_sigmas.npz', mus=mus, sigmas=sigmas, bin_centers=bin_centers)
+
     # ------------------------------- DIRECTION PLOTS -------------------------------- #
 
     n_rows = 6  # how many rows figures
@@ -386,20 +395,30 @@ if __name__ == "__main__":
     fig.tight_layout()
     plt.savefig(root_dir + '/rf_angular_res.png', format='png', transparent=False)
 
+    # save angular resolution
+    np.savez(root_dir + '/ang_reso_plt.npz', sqrttheta268=np.sqrt(theta2_68), bin_centers=bin_centers)
+
+    # ------------------------------- PERFORMANCES SUMMARY ---------------------------------- #
+
     print(test_df)
 
     test_df.to_pickle(root_dir + '/RF_test-table.pkl')
 
     print('Results saved into ./RF_test-table.pkl')
 
-    # ------------------------------- PERFORMANCES SUMMARY ---------------------------------- #
+    summary = '-------------------Separation-------------------'
+    summary += '\n' + 'Accuracy: ' + str(accscore)
+    summary += '\n' + 'AUC_ROC: ' + str(rocauc)
+    summary += '\n' + '---------------------Energy---------------------'
+    summary += '\n' + 'Mean Absolute Error - energy: ' + str(mae_energy)
+    summary += '\n' + '-------------------Direction--------------------'
+    summary += '\n' + 'Mean Absolute Error - direction: ' + str(mae_direction)
 
-    print('-------------------Separation-------------------')
-    print('Accuracy: ', accscore)
-    print('AUC_ROC: ', rocauc)
-    print('---------------------Energy---------------------')
-    print('Mean Absolute Error - energy: ', mae_energy)
-    print('-------------------Direction--------------------')
-    print('Mean Absolute Error - direction: ', mae_direction)
+    # writing summary on file
+    f = open(root_dir + '/summary.txt', 'w')
+    f.write(summary)
+    f.close()
+
+    print(summary)
 
     print('Done!')

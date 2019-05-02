@@ -8,6 +8,7 @@ from ctapipe.image import hillas_parameters, tailcuts_clean, leakage
 from ctapipe.image.timing_parameters import timing_parameters
 from ctapipe.image.cleaning import number_of_islands
 from ctapipe.instrument import CameraGeometry
+from lstchain.reco.utils import disp_parameters
 from astropy import units as u
 
 
@@ -641,11 +642,11 @@ class DataGeneratorRF(keras.utils.Sequence):
         # list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        y, energy, altaz, tgradient, hillas = self.__data_generation(indexes)
+        y, energy, altaz, tgradient, hillas, disp = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
 
-        return y, energy, altaz, tgradient, hillas
+        return y, energy, altaz, tgradient, hillas, disp
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]
@@ -722,7 +723,8 @@ class DataGeneratorRF(keras.utils.Sequence):
         energy = np.empty([self.batch_size, 1], dtype=float)
         altaz = np.empty([self.batch_size, 2], dtype=float)
         tgradient = np.empty([self.batch_size, 2], dtype=float)
-        hillas = np.empty([self.batch_size, 11], dtype=float)
+        hillas = np.empty([self.batch_size, 13], dtype=float)
+        disp = np.empty([self.batch_size, 2], dtype=float)
 
         boundary, picture, min_neighbors = self.cleaning_level['LSTCam']
 
@@ -745,10 +747,11 @@ class DataGeneratorRF(keras.utils.Sequence):
             )
 
             h = hillas_parameters(self.geom[clean], charge[clean])
+
+            print(h)
+
             l = leakage(self.geom, charge, clean)
             n_islands, _ = number_of_islands(self.geom, clean)
-
-            # miss intercept and n of islands
 
             hillas[i, 0] = h['intensity']
             hillas[i, 1] = h['width'] / u.m
@@ -761,6 +764,8 @@ class DataGeneratorRF(keras.utils.Sequence):
             hillas[i, 8] = h['r'] / u.m
             hillas[i, 9] = l['leakage1_intensity']
             hillas[i, 10] = n_islands
+            hillas[i, 11] = h['x']
+            hillas[i, 12] = h['y']
 
             altaz[i, 0] = h5f['LST/delta_alt'][:][int(row[1])]
             altaz[i, 1] = h5f['LST/delta_az'][:][int(row[1])]
@@ -774,16 +779,19 @@ class DataGeneratorRF(keras.utils.Sequence):
                 hillas_parameters=h,
             )
 
-            # TODO: check if timing[0] is correct
-            # print(timing)
             tgradient[i, 0] = timing['slope'] * u.m
             tgradient[i, 1] = timing['intercept']
+
+            disp_container = disp_parameters(h, altaz[i, 0], altaz[i, 1])
+
+            disp[i, 0] = disp_container.dx
+            disp[i, 1] = disp_container.dy
 
             y[i] = int(row[2])
 
             h5f.close()
 
-        return y, energy, altaz, tgradient, hillas
+        return y, energy, altaz, tgradient, hillas, disp
 
 
 class DataGeneratorChain(keras.utils.Sequence):
