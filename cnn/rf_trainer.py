@@ -25,12 +25,12 @@ if __name__ == "__main__":
 
     print('Building generator...')
     training_generator = DataGeneratorRF(train_files, batch_size=32, shuffle=True)
-    test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=False)
+    test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=True)
 
     train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intercept', 'intensity', 'width', 'length',
-                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage1_intensity', 'n_islands', 'x', 'y',
+                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage2_intensity', 'n_islands', 'x', 'y',
                   'disp_dx', 'disp_dy']
-    pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco', 'disp_dx_reco', 'disp_dy_reco']
+    pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
 
     # ------------------------------- TRAINING DATA ---------------------------- #
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     train_df = train_df[pd.notnull(train_df['width'])]
 
     # try to apply more cut (> 200)
-    # train_df = train_df[train_df['intensity'] > 200]
+    train_df = train_df[train_df['intensity'] > 200]
 
     print(train_df)
 
@@ -94,13 +94,11 @@ if __name__ == "__main__":
     test_df = test_df[pd.notnull(test_df['width'])]
 
     # try to apply more cut (> 200)
-    # test_df = test_df[test_df['intensity'] > 200]
+    test_df = test_df[test_df['intensity'] > 200]
 
     pred_df = pd.DataFrame(columns=pred_cols)
 
     # ------------------------------- RF FEATURES ---------------------------- #
-
-    # TODO: check the features in the email
 
     features = ['intensity',
                 'time_gradient',
@@ -109,10 +107,12 @@ if __name__ == "__main__":
                 'wl',
                 'phi',
                 'psi',
+                'x',
+                'y',
                 'skewness',
                 'kurtosis',
                 'r',
-                'leakage1_intensity',
+                'leakage2_intensity',
                 'n_islands',
                 'time_gradient',
                 'intercept']
@@ -172,10 +172,8 @@ if __name__ == "__main__":
 
     # ------------------------------- REGRESSION ---------------------------- #
 
-    # GET RID OF PROTONS BEFORE REGRESSION OPERATIONS
-
+    # GET RID OF PROTONS BEFORE REGRESSION TRAINING
     train_df = train_df[train_df['label'] == 1]
-    test_df = test_df[test_df['label'] == 1]
 
     """
     Trains two Random Forest regressors for Energy and disp_norm
@@ -224,8 +222,6 @@ if __name__ == "__main__":
 
     test_df['mc_energy_reco'] = reg_energy.predict(test_df[features])
 
-    mae_energy = mean_absolute_error(test_df['mc_energy'], test_df['mc_energy_reco'])
-
     print("Random Forest for energy reco trained!")
 
     # direction reconstruction
@@ -241,8 +237,12 @@ if __name__ == "__main__":
 
     test_df['d_alt_reco'], test_df['d_az_reco'] = disp_to_pos(dxdy[:, 0], dxdy[:, 1], test_df['x'], test_df['y'])
 
-    mae_direction = mean_absolute_error([test_df['d_alt'], test_df['d_az']],
-                                        [test_df['d_alt_reco'], test_df['d_az_reco']])
+    # calculate MAE only on gammas
+    test_df_for_performances = test_df[test_df['label'] == 1]
+
+    mae_energy = mean_absolute_error(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy_reco'])
+    mae_direction = mean_absolute_error([test_df_for_performances['d_alt'], test_df_for_performances['d_az']],
+                                        [test_df_for_performances['d_alt_reco'], test_df_for_performances['d_az_reco']])
 
     # ------------------------------- CREATE FOLDER ---------------------------------- #
 
@@ -265,11 +265,11 @@ if __name__ == "__main__":
     # histogram 2d
     plt.figure()
 
-    hE = plt.hist2d(test_df['mc_energy'], test_df['mc_energy_reco'], bins=100)
+    hE = plt.hist2d(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy_reco'], bins=100)
     plt.colorbar(hE[3])
     plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
     plt.ylabel('$log_{10}E_{rec}[TeV]$', fontsize=15)
-    plt.plot(test_df['mc_energy'], test_df['mc_energy'], "-", color='red')
+    plt.plot(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy'], "-", color='red')
 
     plt.title('Histogram2D - Energy reconstruction')
     plt.tight_layout()
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     n_cols = 2  # how many cols figures
     n_figs = n_rows * n_cols
 
-    edges = np.linspace(min(test_df['mc_energy']), max(test_df['mc_energy']), n_figs + 1)
+    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']), n_figs + 1)
     mus = np.array([])
     sigmas = np.array([])
 
@@ -296,7 +296,7 @@ if __name__ == "__main__":
             edge2 = edges[n_cols * i + j + 1]
             # print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
             # print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
-            dfbe = test_df[(test_df['mc_energy'] >= edge1) & (test_df['mc_energy'] < edge2)]
+            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             difE = ((dfbe['mc_energy'] - dfbe['mc_energy_reco']) * np.log(10))
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     n_cols = 2  # how many cols figures
     n_figs = n_rows * n_cols
 
-    edges = np.linspace(min(test_df['mc_energy']), max(test_df['mc_energy']), n_figs + 1)
+    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']), n_figs + 1)
     theta2_68 = np.array([])
 
     # print('Edges: ', edges)
@@ -356,7 +356,7 @@ if __name__ == "__main__":
             # df with ground truth between edges
             edge1 = edges[n_cols * i + j]
             edge2 = edges[n_cols * i + j + 1]
-            dfbe = test_df[(test_df['mc_energy'] >= edge1) & (test_df['mc_energy'] < edge2)]
+            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             theta2 = (dfbe['d_alt'] - dfbe['d_alt_reco']) ** 2 + (dfbe['d_az'] - dfbe['d_az_reco']) ** 2

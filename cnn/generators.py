@@ -748,9 +748,8 @@ class DataGeneratorRF(keras.utils.Sequence):
 
             h = hillas_parameters(self.geom[clean], charge[clean])
 
-            print(h)
-
             l = leakage(self.geom, charge, clean)
+
             n_islands, _ = number_of_islands(self.geom, clean)
 
             hillas[i, 0] = h['intensity']
@@ -762,10 +761,10 @@ class DataGeneratorRF(keras.utils.Sequence):
             hillas[i, 6] = h['skewness']
             hillas[i, 7] = h['kurtosis']
             hillas[i, 8] = h['r'] / u.m
-            hillas[i, 9] = l['leakage1_intensity']
+            hillas[i, 9] = l['leakage2_intensity']
             hillas[i, 10] = n_islands
-            hillas[i, 11] = h['x']
-            hillas[i, 12] = h['y']
+            hillas[i, 11] = h['x'] / u.m
+            hillas[i, 12] = h['y'] / u.m
 
             altaz[i, 0] = h5f['LST/delta_alt'][:][int(row[1])]
             altaz[i, 1] = h5f['LST/delta_az'][:][int(row[1])]
@@ -782,10 +781,10 @@ class DataGeneratorRF(keras.utils.Sequence):
             tgradient[i, 0] = timing['slope'] * u.m
             tgradient[i, 1] = timing['intercept']
 
-            disp_container = disp_parameters(h, altaz[i, 0], altaz[i, 1])
+            disp_container = disp_parameters(h, altaz[i, 0] * u.m, altaz[i, 1] * u.m)
 
-            disp[i, 0] = disp_container.dx
-            disp[i, 1] = disp_container.dy
+            disp[i, 0] = disp_container.dx / u.m
+            disp[i, 1] = disp_container.dy / u.m
 
             y[i] = int(row[2])
 

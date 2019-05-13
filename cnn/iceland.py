@@ -294,3 +294,26 @@ if __name__ == "__main__":
                                 test_dirs=testd_regr)
 
         K.clear_session()
+
+    # learning rate comparison on densenet
+    elif which == 'lrcmpdense':
+
+        traind_class = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp',
+                        '/home/nmarinel/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp']
+        testd_class = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp',
+                       '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test']
+
+        # only train to evaluate validation lr
+        lrs = [1e-4, 1e-3, 1e-2]
+        model_names = 'DenseNet'
+        time = True
+        epochs = 30
+        batch_size = 64
+        opt = 'sgd'
+        validation = True
+        reduction = 1
+        lrop = True
+        sd = False
+        clr = False
+        es = False
+        workers = 4

@@ -1,9 +1,11 @@
 import sys
+
 from keras.layers import Dense
 from keras.utils.data_utils import get_file
 
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
-    ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
+    ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, NASNetLarge, \
+    NASNetA, ResNetFSEA, BaseLine
 
 DENSENET_169_WEIGHTS_PATH_NO_TOP = r'https://github.com/titu1994/DenseNet/releases/download/v3.0/DenseNet-BC-169-32-no-top.h5'
 
@@ -250,6 +252,13 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNetFSEA':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetFSEA(channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ResNet18':
         dropout = 0.5
         hype_print += '\n' + 'dropout: ' + str(dropout)
@@ -283,6 +292,21 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         hype_print += '\n' + 'dropout: ' + str(dropout)
         resnet = ResNet152(channels, img_rows, img_cols, dropout)
         model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'NASNetLarge':
+        resnet = NASNetLarge(channels, img_rows, img_cols)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'NASNetA':
+        resnet = NASNetA(channels, img_rows, img_cols)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'BaseLine':
+        bl = BaseLine(channels, img_rows, img_cols)
+        model = bl.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     else:

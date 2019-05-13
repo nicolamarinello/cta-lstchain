@@ -61,6 +61,41 @@ def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, out
         # hype_print += '\n' + 'dropout_rate: ' + str(dropout_rate)
         # hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
         # hype_print += '\n' + 'Weight decay: ' + str(wd)
+    elif model_name == 'DenseNet169':
+        depth = 169
+        nb_dense_block = 4
+        growth_rate = 32
+        nb_filter = 64
+        nb_layers_per_block = [6, 12, 32, 32]
+        bottleneck = True
+        reduction = 0.5
+        dropout_rate = 0.25
+        subsample_initial_block = True
+        densenet = DenseNet(channels,
+                            img_rows,
+                            img_cols,
+                            outcomes,
+                            depth=depth,
+                            nb_dense_block=nb_dense_block,
+                            growth_rate=growth_rate,
+                            nb_filter=nb_filter,
+                            nb_layers_per_block=nb_layers_per_block,
+                            bottleneck=bottleneck,
+                            reduction=reduction,
+                            dropout_rate=dropout_rate,
+                            subsample_initial_block=subsample_initial_block)
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'nb_dense_block: ' + str(nb_dense_block)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'nb_filter: ' + str(nb_filter)
+        hype_print += '\n' + 'nb_layers_per_block: ' + str(nb_layers_per_block)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
+        hype_print += '\n' + 'dropout_rate: ' + str(dropout_rate)
+        hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
     else:
         print('Model name not valid')
         sys.exit(1)

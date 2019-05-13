@@ -54,7 +54,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     p_es = 25  # patience
 
     # sgd
-    lr = 0.1  # lr
+    lr = 0.01  # lr
     decay = 1e-4  # decay
     momentum = 0.9  # momentum
     nesterov = True
@@ -79,7 +79,7 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     p_lrop = 15  # patience
     md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
-    mlr_lrop = lr / 100  # min lr
+    mlr_lrop = a_lr / 100  # min lr
 
     # clr
     max_lr = 3.16e-4
