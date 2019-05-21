@@ -5,7 +5,7 @@ from keras.utils.data_utils import get_file
 
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
     ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, NASNetLarge, \
-    NASNetA, ResNetFSEA, BaseLine
+    NASNetA, ResNetFSEA, BaseLine, ResNeXt
 
 DENSENET_169_WEIGHTS_PATH_NO_TOP = r'https://github.com/titu1994/DenseNet/releases/download/v3.0/DenseNet-BC-169-32-no-top.h5'
 
@@ -22,7 +22,7 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'ClassifierV3':
-        class_v3 = ClassifierV3(img_rows, img_cols)
+        class_v3 = ClassifierV3(channels, img_rows, img_cols)
         model = class_v3.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
@@ -245,6 +245,50 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
         hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
         hype_print += '\n' + 'Reduction: ' + str(reduction)
+    elif model_name == 'DenseNetC':
+        depth = 94
+        growth_rate = 12
+        bottleneck = False
+        reduction = 0
+        subsample_initial_block = True
+        densenet = DenseNet(channels,
+                            img_rows,
+                            img_cols,
+                            depth=depth,
+                            growth_rate=growth_rate,
+                            bottleneck=bottleneck,
+                            reduction=reduction,
+                            subsample_initial_block=subsample_initial_block
+                            )
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
+    elif model_name == 'DenseNetD':
+        depth = 34
+        growth_rate = 32
+        bottleneck = True
+        reduction = 0.3
+        subsample_initial_block = True
+        densenet = DenseNet(channels,
+                            img_rows,
+                            img_cols,
+                            depth=depth,
+                            growth_rate=growth_rate,
+                            bottleneck=bottleneck,
+                            reduction=reduction,
+                            subsample_initial_block=subsample_initial_block
+                            )
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
     elif model_name == 'ResNetFSE':
         wd = 1e-4
         hype_print += '\n' + 'Weight decay: ' + str(wd)
@@ -307,6 +351,24 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
     elif model_name == 'BaseLine':
         bl = BaseLine(channels, img_rows, img_cols)
         model = bl.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNeXt56-8-64':
+        depth = 56
+        cardinality = 8
+        width = 64
+        weight_decay = 5e-4
+        rxt = ResNeXt(channels, img_rows, img_cols, depth, cardinality, width, weight_decay)
+        model = rxt.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNeXt29-4-8':
+        depth = 29
+        cardinality = 4
+        width = 8
+        weight_decay = 5e-4
+        rxt = ResNeXt(channels, img_rows, img_cols, depth, cardinality, width, weight_decay)
+        model = rxt.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     else:

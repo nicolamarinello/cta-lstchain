@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
     # direction reconstruction
 
-    print("Training Random Forest Regressor for disp_norm Reconstruction...")
+    print("Training Random Forest Regressor for disp Reconstruction...")
 
     reg_disp = RandomForestRegressor(**random_forest_regressor_args)
     reg_disp.fit(train_df[features], train_df[['disp_dx', 'disp_dy']])

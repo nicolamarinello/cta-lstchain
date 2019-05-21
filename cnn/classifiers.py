@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.regularizers import l2
 
 import densenetlst
+import resnext
 
 
 class ClassifierV1:
@@ -65,33 +66,33 @@ class ClassifierV2:
 
 class ClassifierV3:
 
-    def __init__(self, img_rows, img_cols):
+    def __init__(self, channels, img_rows, img_cols):
+        self.channels = channels
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.model = Sequential()  # define the network model
 
     def get_model(self):
-        self.model.add(Conv2D(32, (3, 3), input_shape=(1, self.img_rows, self.img_cols), padding='same',
-                              data_format='channels_first'))
+        self.model.add(Conv2D(32, (3, 3), input_shape=(self.img_rows, self.img_cols, self.channels), padding='same'))
         self.model.add(BatchNormalization())
         self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
-        self.model.add(Conv2D(64, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        self.model.add(Conv2D(64, (3, 3), padding='same'))
         self.model.add(BatchNormalization())
         self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
-        self.model.add(Conv2D(128, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        self.model.add(Conv2D(128, (3, 3), padding='same'))
         self.model.add(BatchNormalization())
         self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
-        self.model.add(Conv2D(256, (3, 3), padding='same', data_format='channels_first'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        self.model.add(Conv2D(256, (3, 3), padding='same'))
         self.model.add(BatchNormalization())
         self.model.add(Activation('relu'))
         self.model.add(Dropout(0.20))
-        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), data_format='channels_first'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
         self.model.add(Flatten())
         self.model.add(Dense(128, activation='relu'))
         self.model.add(BatchNormalization())
@@ -1940,24 +1941,62 @@ class BaseLine:
         self.model = Sequential()  # define the network model
 
     def get_model(self):
-        self.model.add(Conv2D(32, kernel_size=(3, 3), activation='relu',
-                              input_shape=(self.img_rows, self.img_cols, self.channels)))
-        self.model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
+        self.model.add(Conv2D(32, kernel_size=(3, 3), input_shape=(self.img_rows, self.img_cols, self.channels)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
+        self.model.add(Conv2D(32, kernel_size=(3, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
-        self.model.add(Dropout(0.5))
-        self.model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-        self.model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+        self.model.add(Dropout(0.2))
+        self.model.add(Conv2D(64, kernel_size=(3, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
+        self.model.add(Conv2D(64, kernel_size=(3, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
-        self.model.add(Dropout(0.5))
-        self.model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-        self.model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
+        self.model.add(Dropout(0.2))
+        self.model.add(Conv2D(128, kernel_size=(3, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
+        self.model.add(Conv2D(128, kernel_size=(3, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
-        self.model.add(Dropout(0.5))
+        self.model.add(Dropout(0.2))
         self.model.add(Flatten())
         self.model.add(Dense(32, activation='relu'))
-        self.model.add(Dropout(0.5))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
+        self.model.add(Dropout(0.2))
         self.model.add(Dense(128, activation='relu'))
-        self.model.add(Dropout(0.5))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
+        self.model.add(Dropout(0.2))
         self.model.add(Dense(units=1, activation='sigmoid'))
 
         return self.model
+
+
+class ResNeXt:
+
+    def __init__(self, channels, img_rows, img_cols, depth, cardinality, width, weight_decay):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.depth = depth
+        self.cardinality = cardinality
+        self.width = width
+        self.weight_decay = weight_decay
+
+    def get_model(self):
+        model = resnext.ResNext((self.img_rows, self.img_cols, self.channels),
+                                self.depth,
+                                self.cardinality,
+                                self.width,
+                                self.weight_decay,
+                                classes=1,
+                                activation='sigmoid')
+
+        return model

@@ -904,7 +904,7 @@ class DataGeneratorChain(keras.utils.Sequence):
 
         'Generates data containing batch_size samples'
         # Initialization
-        x = np.empty([self.batch_size, self.arrival_time + 1, 100, 100])
+        x = np.empty([self.batch_size, 100, 100, self.arrival_time + 1])
         y = np.empty([self.batch_size, 1], dtype=int)
         intensity = np.empty([self.batch_size, 1], dtype=float)
         energy = np.empty([self.batch_size, 1], dtype=float)
@@ -919,9 +919,9 @@ class DataGeneratorChain(keras.utils.Sequence):
             h5f = h5py.File(filename, 'r')
 
             # Store image
-            x[i, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
+            x[i, :, :, 0] = h5f['LST/LST_image_charge_interp'][int(row[1])]
             if self.arrival_time:
-                x[i, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
+                x[i, :, :, 1] = h5f['LST/LST_image_peak_times_interp'][int(row[1])]
 
             charge = h5f['LST/LST_image_charge'][int(row[1])]
             energy[i] = np.log10(h5f['Event_Info/ei_mc_energy'][:][int(row[3])])

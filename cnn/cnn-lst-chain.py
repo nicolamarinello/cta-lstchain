@@ -93,6 +93,10 @@ if __name__ == "__main__":
 
     with open('lstch_analysis.txt', 'w') as f:
         print('CNN LST Chain - Full analysis\n', file=f)
+        print('Separation Network:' + str(class_path) + '\n', file=f)
+        print('Energy Network:' + str(rege_path) + '\n', file=f)
+        print('Direction Network:' + str(altaz_path) + '\n', file=f)
+        print('Number of files in the test set:' + str(len(h5files)) + '\n', file=f)
         print(tabulate(df, headers='keys', tablefmt='psql'), file=f)
 
     df.to_pickle('lstch_analysis.pkl')

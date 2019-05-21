@@ -64,8 +64,8 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
-    a_decay = 0
-    amsgrad = True
+    a_decay = 1e-4
+    amsgrad = False
 
     # adabound
     ab_lr = 1e-03

@@ -1,6 +1,6 @@
 import sys
 
-from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet
+from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet, ResNetFSE, BaseLine
 
 
 def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, outcomes):
@@ -96,6 +96,18 @@ def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, out
         hype_print += '\n' + 'Reduction: ' + str(reduction)
         hype_print += '\n' + 'dropout_rate: ' + str(dropout_rate)
         hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
+    elif model_name == 'ResNetFSE':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetFSE(outcomes, channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'BaseLine':
+        bl = BaseLine(outcomes, channels, img_rows, img_cols)
+        model = bl.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     else:
         print('Model name not valid')
         sys.exit(1)
