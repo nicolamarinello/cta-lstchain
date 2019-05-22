@@ -4,7 +4,7 @@ from regressor_training import regressor_training_main
 
 if __name__ == "__main__":
 
-    which = 'paper-densenet'
+    which = 'thesisclassretrain'
 
     if which == 'resnets':
 
@@ -317,3 +317,50 @@ if __name__ == "__main__":
         clr = False
         es = False
         workers = 4
+
+    # learning rate comparison on densenet
+    elif which == 'thesisclassretrain':
+
+        traind_class = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp',
+                        '/home/nmarinel/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp']
+        validd_class = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation',
+                        '/home/nmarinel/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/validation']
+        testd_class = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp',
+                       '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test']
+
+        # densenet paper classifier
+        models = ['BaseLine', 'BaseLine', 'ResNetF', 'DenseNet', 'ResNetFSE']
+        time = [False, True, True, True, True]
+        epochs = 50
+        batch_size = [128, 128, 128, 64, 128]
+        opt = 'adam'
+        validation = True
+        reduction = 1
+        lrop = True
+        sd = False
+        clr = False
+        es = False
+        workers = 4
+
+        for i, model in enumerate(models):
+
+            print(model)
+
+            classifier_training_main(folders=traind_class,
+                                     val_folders=validd_class,
+                                     model_name=model,
+                                     time=time[i],
+                                     epochs=epochs,
+                                     batch_size=batch_size[i],
+                                     opt=opt,
+                                     val=validation,
+                                     red=reduction,
+                                     lropf=lrop,
+                                     sd=sd,
+                                     clr=clr,
+                                     es=es,
+                                     workers=workers,
+                                     test_dirs=testd_class
+                                     )
+
+            K.clear_session()

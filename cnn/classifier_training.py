@@ -30,7 +30,7 @@ from utils import get_all_files
 from classifier_selector import select_classifier
 
 
-def classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
+def classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs):
 
     # remove semaphore warnings
@@ -64,8 +64,8 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
-    a_decay = 1e-4
-    amsgrad = False
+    a_decay = 0
+    amsgrad = True
 
     # adabound
     ab_lr = 1e-03
@@ -95,18 +95,8 @@ def classifier_training_main(folders, model_name, time, epochs, batch_size, opt,
     # if we:
     #    weights = [gdiff_w_path, protn_w_path]
 
-    h5files = get_all_files(folders)
-    random.shuffle(h5files)
-    # reduction = int(len(h5files)*red)
-    # h5files = h5files[:reduction]
-    n_files = len(h5files)
-    if val:
-        val_per = 0.2
-    else:
-        val_per = 0
-    tv_idx = int(n_files * (1 - val_per))
-    training_files = h5files[:tv_idx]
-    validation_files = h5files[tv_idx:]
+    training_files = get_all_files(folders)
+    validation_files = get_all_files(val_folders)
 
     if clr and lropf:
         print('Cannot use CLR and Reduce lr on plateau')
@@ -379,6 +369,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
     parser.add_argument(
+        '--val_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files valid data.', required=True)
+    parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
         '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
@@ -411,6 +403,7 @@ if __name__ == "__main__":
 
     # cmd line parameters
     folders = FLAGS.dirs
+    val_folders = FLAGS.val_dirs
     model_name = FLAGS.model
     time = FLAGS.time
     epochs = FLAGS.epochs
@@ -426,5 +419,5 @@ if __name__ == "__main__":
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
-    classifier_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
+    classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
                              test_dirs)
