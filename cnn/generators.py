@@ -642,11 +642,11 @@ class DataGeneratorRF(keras.utils.Sequence):
         # list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        y, energy, altaz, tgradient, hillas, disp = self.__data_generation(indexes)
+        y, energy, altaz, tgradient, hillas = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
 
-        return y, energy, altaz, tgradient, hillas, disp
+        return y, energy, altaz, tgradient, hillas
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]
@@ -724,7 +724,7 @@ class DataGeneratorRF(keras.utils.Sequence):
         altaz = np.empty([self.batch_size, 2], dtype=float)
         tgradient = np.empty([self.batch_size, 2], dtype=float)
         hillas = np.empty([self.batch_size, 13], dtype=float)
-        disp = np.empty([self.batch_size, 2], dtype=float)
+        # disp = np.empty([self.batch_size, 2], dtype=float)
 
         boundary, picture, min_neighbors = self.cleaning_level['LSTCam']
 
@@ -781,16 +781,16 @@ class DataGeneratorRF(keras.utils.Sequence):
             tgradient[i, 0] = timing['slope'] * u.m
             tgradient[i, 1] = timing['intercept']
 
-            disp_container = disp_parameters(h, altaz[i, 0] * u.m, altaz[i, 1] * u.m)
+            # disp_container = disp_parameters(h, altaz[i, 0] * u.m, altaz[i, 1] * u.m)
 
-            disp[i, 0] = disp_container.dx / u.m
-            disp[i, 1] = disp_container.dy / u.m
+            # disp[i, 0] = disp_container.dx / u.m
+            # disp[i, 1] = disp_container.dy / u.m
 
             y[i] = int(row[2])
 
             h5f.close()
 
-        return y, energy, altaz, tgradient, hillas, disp
+        return y, energy, altaz, tgradient, hillas # , disp
 
 
 class DataGeneratorChain(keras.utils.Sequence):

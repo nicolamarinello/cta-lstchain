@@ -1,6 +1,7 @@
 import sys
 
-from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet, ResNetFSE, BaseLine
+from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet, ResNetFSE, BaseLine, \
+    ResNetHSE, VGG16
 
 
 def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, outcomes):
@@ -103,9 +104,21 @@ def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, out
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNetHSE':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetHSE(outcomes, channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'BaseLine':
         bl = BaseLine(outcomes, channels, img_rows, img_cols)
         model = bl.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'VGG16':
+        vgg16 = BaseLine(outcomes, channels, img_rows, img_cols)
+        model = vgg16.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     else:

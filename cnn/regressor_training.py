@@ -26,7 +26,7 @@ from regressor_training_plots import train_plots
 from utils import get_all_files
 
 
-def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
+def regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs):
 
     # remove semaphore warnings
@@ -50,18 +50,18 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     p_es = 50  # patience
 
     # sgd
-    lr = 0.01  # lr
+    lr = 0.0001  # lr
     decay = 1e-4  # decay
     momentum = 0.9  # momentum
     nesterov = True
 
     # adam
-    a_lr = 0.001
+    a_lr = 0.0001
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
-    a_decay = 1e-4
-    amsgrad = False
+    a_decay = 0
+    amsgrad = True
 
     # adabound
     ab_lr = 1e-03
@@ -70,12 +70,18 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     ab_weight_decay = 0
     amsbound = False
 
+    # rmsprop
+    r_lr = 0.01
+    r_rho = 0.9
+    r_epsilon = None
+    r_decay = 0.0
+
     # reduce lr on plateau
     f_lrop = 0.1  # factor
-    p_lrop = 25  # patience
+    p_lrop = 15  # patience
     md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
-    mlr_lrop = lr / 100  # min lr
+    mlr_lrop = r_lr / 100  # min lr
 
     # clr
     max_lr = 0.032
@@ -90,18 +96,8 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
     # if we:
     #    weights = [gdiff_w_path]
 
-    h5files = get_all_files(folders)
-    random.shuffle(h5files)
-    # reduction = int(len(h5files)*red)
-    # h5files = h5files[:reduction]
-    n_files = len(h5files)
-    if val:
-        val_per = 0.2
-    else:
-        val_per = 0
-    tv_idx = int(n_files * (1 - val_per))
-    training_files = h5files[:tv_idx]
-    validation_files = h5files[tv_idx:]
+    training_files = get_all_files(folders)
+    validation_files = get_all_files(val_folders)
 
     if clr and lropf:
         print('Cannot use CLR and Reduce lr on plateau')
@@ -163,6 +159,13 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         hype_print += '\n' + 'weight_decay: ' + str(ab_weight_decay)
         hype_print += '\n' + 'amsbound: ' + str(amsbound)
         hype_print += '\n' + '------------'
+    elif opt == 'rmsprop':
+        hype_print += '\n' + '--- RMSprop ---'
+        hype_print += '\n' + 'lr: ' + str(r_lr)
+        hype_print += '\n' + 'rho: ' + str(r_rho)
+        hype_print += '\n' + 'epsilon: ' + str(r_epsilon)
+        hype_print += '\n' + 'decay: ' + str(r_decay)
+        hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
         hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)
@@ -194,8 +197,10 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
 
     outcomes = 1
+    loss = 'mean_absolute_percentage_error'
     if feature == 'xy':
         outcomes = 2
+        loss = 'mean_absolute_error'
 
     # keras.backend.set_image_data_format('channels_first')
 
@@ -259,6 +264,9 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
         adabound = AdaBound(lr=ab_lr, final_lr=ab_final_lr, gamma=ab_gamma, weight_decay=ab_weight_decay,
                             amsbound=False)
         optimizer = adabound
+    elif opt == 'rmsprop':
+        rmsprop = optimizers.RMSprop(lr=r_lr, rho=r_rho, epsilon=r_epsilon, decay=r_decay)
+        optimizer = rmsprop
 
     # reduce lr on plateau
     if lropf:
@@ -293,7 +301,7 @@ def regressor_training_main(folders, model_name, time, epochs, batch_size, opt, 
                                     maximum_momentum=maximum_momentum, minimum_momentum=minimum_momentum)
         callbacks.append(lr_manager_clr)
 
-    model.compile(optimizer=optimizer, loss='mean_absolute_error')
+    model.compile(optimizer=optimizer, loss=loss)
 
     if val:
         model.fit_generator(generator=training_generator,
@@ -370,6 +378,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
     parser.add_argument(
+        '--val_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files valid data.', required=True)
+    parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
         '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
@@ -404,6 +414,7 @@ if __name__ == "__main__":
 
     # cmd line parameters
     folders = FLAGS.dirs
+    val_folders = FLAGS.val_dirs
     model_name = FLAGS.model
     time = FLAGS.time
     epochs = FLAGS.epochs
@@ -420,5 +431,5 @@ if __name__ == "__main__":
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
-    regressor_training_main(folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
+    regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, feature,
                             workers, test_dirs)

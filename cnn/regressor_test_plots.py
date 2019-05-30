@@ -90,10 +90,12 @@ def test_plots(pkl, feature):
         np.savez(folder + '/mus_sigmas.npz', mus=mus, sigmas=sigmas, bin_centers=bin_centers)
 
         mae_energy = mean_absolute_error(df['GroundTruth'], df['Predicted'])
+        mape_energy = np.mean(np.abs((df['GroundTruth'] - df['Predicted']) / df['GroundTruth'])) * 100
 
         # writing summary on file
-        f = open(folder + '/mae.txt', 'w')
-        f.write('MAE: ' + str(mae_energy))
+        f = open(folder + '/mae_mape.txt', 'w')
+        f.write('MAE: ' + str(mae_energy) + '\n')
+        f.write('MAPE: ' + str(mape_energy))
         f.close()
 
     elif feature == 'xy':

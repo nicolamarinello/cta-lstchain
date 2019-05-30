@@ -3,22 +3,30 @@ from os import mkdir
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from astropy import units as u
+from astropy.coordinates import AltAz
+from ctapipe.coordinates.nominal_frame import NominalFrame
+from ctapipe.io.containers import HillasParametersContainer
 from keras.utils.data_utils import OrderedEnqueuer
+from tqdm import tqdm
 from keras.utils.generic_utils import Progbar
 from scipy.stats import norm
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve, mean_absolute_error
 
 from generators import DataGeneratorRF
-from lstchain.reco.utils import disp_to_pos
+from lstchain.reco.utils import sky_to_camera, disp_parameters, reco_source_position_sky
 from utils import get_all_files
 
 if __name__ == "__main__":
 
-    train_folders = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp',
-                     '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp']
-    test_folders = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp',
-                    '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test']
+    train_folders = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/',
+                     '/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation',
+                     '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/',
+                     '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/validation/']
+
+    test_folders = ['/ssdraptor/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp/',
+                    '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test/']
 
     train_files = get_all_files(train_folders)
     test_files = get_all_files(test_folders)
@@ -28,8 +36,7 @@ if __name__ == "__main__":
     test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=True)
 
     train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intercept', 'intensity', 'width', 'length',
-                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage2_intensity', 'n_islands', 'x', 'y',
-                  'disp_dx', 'disp_dy']
+                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage2_intensity', 'n_islands', 'x', 'y']
     pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
 
     # ------------------------------- TRAINING DATA ---------------------------- #
@@ -37,7 +44,7 @@ if __name__ == "__main__":
     print('Retrieving training data...')
     steps_done = 0
     steps = len(training_generator)
-    # steps = 1000
+    steps = 10
 
     enqueuer = OrderedEnqueuer(training_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -49,9 +56,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas, disp = generator_output
+        y, energy, altaz, tgradient, hillas, = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -61,7 +68,7 @@ if __name__ == "__main__":
     train_df = train_df[pd.notnull(train_df['width'])]
 
     # try to apply more cut (> 200)
-    train_df = train_df[train_df['intensity'] > 200]
+    # train_df = train_df[train_df['intensity'] > 200]
 
     print(train_df)
 
@@ -70,7 +77,7 @@ if __name__ == "__main__":
     print('Retrieving testing data...')
     steps_done = 0
     steps = len(test_generator)
-    # steps = 1000
+    steps = 10
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -82,9 +89,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas, disp = generator_output
+        y, energy, altaz, tgradient, hillas = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -94,7 +101,7 @@ if __name__ == "__main__":
     test_df = test_df[pd.notnull(test_df['width'])]
 
     # try to apply more cut (> 200)
-    test_df = test_df[test_df['intensity'] > 200]
+    # test_df = test_df[test_df['intensity'] > 200]
 
     pred_df = pd.DataFrame(columns=pred_cols)
 
@@ -224,7 +231,47 @@ if __name__ == "__main__":
 
     print("Random Forest for energy reco trained!")
 
-    # direction reconstruction
+    # ########################## Direction reconstruction ######################### #
+
+    # what I get from the simulations is: delta_alt & delta_az + hillas parameters
+    # I have to find delta_alt_reco & delta_az_reco and compute the angular resolution
+    # I have a pandas dataframe train_df with columns d_alt & d_az
+    # and a pandas dataframe test_df with columns d_alt & d_az & d_alt_reco & d_az_reco
+    # how can I get source_direction_back with just d_alt & d_az ?????????
+
+    point = AltAz(alt=70 * u.deg, az=0 * u.deg)
+
+    # add two columns to train_df
+    train_df["disp_dx"] = np.nan
+    train_df["disp_dy"] = np.nan
+
+    for index, row in tqdm(train_df.iterrows()):
+        src = NominalFrame(origin=point, delta_az=1.02789105 * u.deg, delta_alt=0.70242733 * u.deg)
+        source_direction = src.transform_to(AltAz)
+
+        # source_direction_back = source_direction.transform_to(AltAz)
+
+        src_pos = sky_to_camera(source_direction.alt,
+                                source_direction.az,
+                                28 * u.m,
+                                70 * u.deg,
+                                0 * u.deg)
+
+        hillas = HillasParametersContainer(x=row['x'] * u.m,
+                                           y=row['y'] * u.m,
+                                           intensity=row['intensity'],
+                                           r=row['r'],
+                                           phi=row['phi'],
+                                           length=row['length'],
+                                           width=row['width'],
+                                           psi=row['psi'] * u.deg,
+                                           skewness=row['skewness'],
+                                           kurtosis=row['kurtosis'])
+
+        disp = disp_parameters(hillas=hillas, source_pos_x=src_pos.x, source_pos_y=src_pos.y)
+
+        row["disp_dx"] = disp.dx
+        row["disp_dy"] = disp.dy
 
     print("Training Random Forest Regressor for disp Reconstruction...")
 
@@ -233,16 +280,57 @@ if __name__ == "__main__":
 
     print("Random Forest for direction reco trained!")
 
-    dxdy = reg_disp.predict(test_df[features])
+    dxdy_reco = reg_disp.predict(test_df[features])
 
-    test_df['d_alt_reco'], test_df['d_az_reco'] = disp_to_pos(dxdy[:, 0], dxdy[:, 1], test_df['x'], test_df['y'])
+    test_df["disp_dx_reco"] = dxdy_reco[:, 0]
+    test_df["disp_dy_reco"] = dxdy_reco[:, 1]
 
-    # calculate MAE only on gammas
+    for index, row in tqdm(test_df.iterrows()):
+        altaz_reco = reco_source_position_sky(row['x'] * u.m,
+                                              row['y'] * u.m,
+                                              row["disp_dx_reco"] * u.m,
+                                              row["disp_dy_reco"] * u.m,
+                                              28 * u.m,
+                                              70 * u.deg,
+                                              0 * u.deg)
+
+        # source_direction_reco = altaz.transform_to(NominalFrame(origin=point))
+
+        # theta = np.sqrt(pow(altaz_reco.alt - source_direction.alt, 2) + pow(altaz_reco.az - source_direction.az, 2))
+
+        src_reco = AltAz(alt=altaz_reco.alt, az=altaz_reco.az)
+        source_direction_reco = src_reco.transform_to(NominalFrame(origin=point))
+
+        # print('source_direction_reco.delta_alt', source_direction_reco.delta_alt / u.deg)
+
+        # row['d_alt_reco'] = (source_direction_reco.delta_alt / u.deg)
+        test_df.ix[index, 'd_alt_reco'] = (source_direction_reco.delta_alt / u.deg)
+        test_df.ix[index, 'd_az_reco'] = (source_direction_reco.delta_az / u.deg)
+        # row['d_az_reco'] = (source_direction_reco.delta_az / u.deg)
+
+        # print('row[d_alt_reco]', row['d_alt_reco'])
+
+    # src_pos_x_reco, src_pos_y_reco = disp_to_pos(test_df["disp_dx_reco"], test_df["disp_dy_reco"], test_df['x'],
+    #                                             test_df['y'])
+
+    print('################# TEST DF #################')
+    print(test_df)
+
+    # ################# calculate MAE & MAPE only on gammas ################### #
+
+    # remove any lines that contains NaNs
+    # test_df.dropna(how='any')
+
     test_df_for_performances = test_df[test_df['label'] == 1]
 
     mae_energy = mean_absolute_error(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy_reco'])
+    mape_energy = np.mean(np.abs(
+        (test_df_for_performances['mc_energy'] - test_df_for_performances['mc_energy_reco']) / test_df_for_performances[
+            'mc_energy'])) * 100
+
     mae_direction = mean_absolute_error([test_df_for_performances['d_alt'], test_df_for_performances['d_az']],
                                         [test_df_for_performances['d_alt_reco'], test_df_for_performances['d_az_reco']])
+    # ################################################################## #
 
     # ------------------------------- CREATE FOLDER ---------------------------------- #
 
@@ -279,7 +367,8 @@ if __name__ == "__main__":
     n_cols = 2  # how many cols figures
     n_figs = n_rows * n_cols
 
-    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']), n_figs + 1)
+    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']),
+                        n_figs + 1)
     mus = np.array([])
     sigmas = np.array([])
 
@@ -296,7 +385,8 @@ if __name__ == "__main__":
             edge2 = edges[n_cols * i + j + 1]
             # print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
             # print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
-            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
+            dfbe = test_df_for_performances[
+                (test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             difE = ((dfbe['mc_energy'] - dfbe['mc_energy_reco']) * np.log(10))
@@ -338,11 +428,14 @@ if __name__ == "__main__":
 
     # ------------------------------- DIRECTION PLOTS -------------------------------- #
 
+    plt.close('all')
+
     n_rows = 6  # how many rows figures
     n_cols = 2  # how many cols figures
     n_figs = n_rows * n_cols
 
-    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']), n_figs + 1)
+    edges = np.linspace(min(test_df_for_performances['mc_energy']), max(test_df_for_performances['mc_energy']),
+                        n_figs + 1)
     theta2_68 = np.array([])
 
     # print('Edges: ', edges)
@@ -356,7 +449,8 @@ if __name__ == "__main__":
             # df with ground truth between edges
             edge1 = edges[n_cols * i + j]
             edge2 = edges[n_cols * i + j + 1]
-            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
+            dfbe = test_df_for_performances[
+                (test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             theta2 = (dfbe['d_alt'] - dfbe['d_alt_reco']) ** 2 + (dfbe['d_az'] - dfbe['d_az_reco']) ** 2
