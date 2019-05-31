@@ -4,6 +4,8 @@ from keras import backend as K
 from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization, \
     Activation, Input, Reshape, multiply, GlobalAveragePooling2D, Permute
 from keras.models import Model
+from keras import layers
+from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2
 
@@ -2000,3 +2002,87 @@ class ResNeXt:
                                 activation='sigmoid')
 
         return model
+
+
+class VGG16:
+
+    def __init__(self, channels, img_rows, img_cols):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.model = Sequential()  # define the network model
+
+    def get_model(self):
+
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        inputs = Input(shape=input_shape)
+
+        # Block 1
+        x = layers.Conv2D(64, (3, 3), padding='same', name='block1_conv1')(inputs)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(64, (3, 3), padding='same', name='block1_conv2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
+
+        # Block 2
+        x = layers.Conv2D(128, (3, 3), padding='same', name='block2_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(128, (3, 3), padding='same', name='block2_conv2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
+
+        # Block 3
+        x = layers.Conv2D(256, (3, 3), padding='same', name='block3_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(256, (3, 3), padding='same', name='block3_conv2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(256, (3, 3), padding='same', name='block3_conv3')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
+
+        # Block 4
+        x = layers.Conv2D(512, (3, 3),padding='same', name='block4_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block4_conv2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block4_conv3')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
+
+        # Block 5
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block5_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block5_conv2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block5_conv3')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
+
+        # Classification block
+        x = layers.Flatten(name='flatten')(x)
+        x = layers.Dense(4096, name='fc1')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Dense(4096, name='fc2')(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = layers.Dense(1, activation='sigmoid')(x)
+
+        # Create model.
+        self.model = models.Model(inputs, x, name='vgg16')
+
+        return self.model

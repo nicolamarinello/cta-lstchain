@@ -20,13 +20,13 @@ from utils import get_all_files
 
 if __name__ == "__main__":
 
-    train_folders = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/',
-                     '/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation',
-                     '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/',
-                     '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/validation/']
+    train_folders = ['/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/',
+                     '/mnt/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation',
+                     '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/',
+                     '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp/validation/']
 
-    test_folders = ['/ssdraptor/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp/',
-                    '/ssdraptor/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test/']
+    test_folders = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp/',
+                    '/mnt/simulations/Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_test/']
 
     train_files = get_all_files(train_folders)
     test_files = get_all_files(test_folders)
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     print('Retrieving training data...')
     steps_done = 0
     steps = len(training_generator)
-    steps = 10
+    steps = 200
 
     enqueuer = OrderedEnqueuer(training_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     print('Retrieving testing data...')
     steps_done = 0
     steps = len(test_generator)
-    steps = 10
+    steps = 200
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     train_df["disp_dy"] = np.nan
 
     for index, row in tqdm(train_df.iterrows()):
-        src = NominalFrame(origin=point, delta_az=1.02789105 * u.deg, delta_alt=0.70242733 * u.deg)
+        src = NominalFrame(origin=point, delta_az=row['d_az'] * u.deg, delta_alt=row['d_alt'] * u.deg)
         source_direction = src.transform_to(AltAz)
 
         # source_direction_back = source_direction.transform_to(AltAz)
@@ -383,15 +383,15 @@ if __name__ == "__main__":
             # df with ground truth between edges
             edge1 = edges[n_cols * i + j]
             edge2 = edges[n_cols * i + j + 1]
-            # print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
-            # print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
+            print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
+            print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
             dfbe = test_df_for_performances[
                 (test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             difE = ((dfbe['mc_energy'] - dfbe['mc_energy_reco']) * np.log(10))
-            section = difE[abs(difE) < 1.5]
-            mu, sigma = norm.fit(section)
+            # section = difE[abs(difE) < 1.5]
+            mu, sigma = norm.fit(difE)
             mus = np.append(mus, mu)
             sigmas = np.append(sigmas, sigma)
             n, bins, patches = plt.hist(difE, 100, density=1, alpha=0.75)
@@ -459,12 +459,12 @@ if __name__ == "__main__":
             for k in range(0, len(hist[0]) + 1):
                 fraction = np.sum(hist[0][:k]) / total
                 if fraction > 0.68:
-                    # print('\nTotal: ', total)
-                    # print('0.68 of total:', np.sum(hist[0][:k]))
-                    # print('Fraction:', fraction)
+                    print('\nTotal: ', total)
+                    print('0.68 of total:', np.sum(hist[0][:k]))
+                    print('Fraction:', fraction)
                     theta2_68 = np.append(theta2_68, hist[1][k])
                     break
-            n, bins, patches = plt.hist(theta2, bins=100)
+            n, bins, patches = plt.hist(theta2, bins=100, range=(0, hist[1][k + 1]))
             plt.axvline(hist[1][k], color='r', linestyle='dashed', linewidth=1)
             plt.yscale('log', nonposy='clip')
             plt.xlabel(r'$\theta^{2}(º)$', fontsize=10)
@@ -505,6 +505,7 @@ if __name__ == "__main__":
     summary += '\n' + 'AUC_ROC: ' + str(rocauc)
     summary += '\n' + '---------------------Energy---------------------'
     summary += '\n' + 'Mean Absolute Error - energy: ' + str(mae_energy)
+    summary += '\n' + 'Mean Absolute Percentage Error - energy: ' + str(mape_energy)
     summary += '\n' + '-------------------Direction--------------------'
     summary += '\n' + 'Mean Absolute Error - direction: ' + str(mae_direction)
 
