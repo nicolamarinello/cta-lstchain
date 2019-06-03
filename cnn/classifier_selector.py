@@ -354,7 +354,7 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     elif model_name == 'VGG16':
-        vgg = BaseLine(channels, img_rows, img_cols)
+        vgg = VGG16(channels, img_rows, img_cols)
         model = vgg.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)

@@ -81,7 +81,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     p_lrop = 15  # patience
     md_lrop = 0.005  # min delta
     cd_lrop = 5  # cool down
-    mlr_lrop = r_lr / 100  # min lr
+    mlr_lrop = a_lr / 100  # min lr
 
     # clr
     max_lr = 0.032
@@ -197,7 +197,8 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
 
     outcomes = 1
-    loss = 'mean_absolute_percentage_error'
+    # loss = 'mean_absolute_percentage_error'
+    loss = 'mean_absolute_error'
     if feature == 'xy':
         outcomes = 2
         loss = 'mean_absolute_error'

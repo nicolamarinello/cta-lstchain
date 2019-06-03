@@ -5,6 +5,7 @@ from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AverageP
     Activation, Input, Reshape, multiply, GlobalAveragePooling2D, Permute
 from keras.models import Model
 from keras import layers
+from keras import models
 from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2

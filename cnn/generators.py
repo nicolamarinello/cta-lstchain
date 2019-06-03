@@ -7,7 +7,10 @@ import numpy as np
 from ctapipe.image import hillas_parameters, tailcuts_clean, leakage
 from ctapipe.image.timing_parameters import timing_parameters
 from ctapipe.image.cleaning import number_of_islands
+from astropy.coordinates import AltAz
+from lstchain.reco.utils import sky_to_camera, disp_parameters
 from ctapipe.instrument import CameraGeometry
+from ctapipe.coordinates.nominal_frame import NominalFrame
 from lstchain.reco.utils import disp_parameters
 from astropy import units as u
 
@@ -642,11 +645,11 @@ class DataGeneratorRF(keras.utils.Sequence):
         # list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        y, energy, altaz, tgradient, hillas = self.__data_generation(indexes)
+        y, energy, altaz, tgradient, hillas, disp = self.__data_generation(indexes)
 
         # print("training idx: ", indexes)
 
-        return y, energy, altaz, tgradient, hillas
+        return y, energy, altaz, tgradient, hillas, disp
 
     def get_indexes(self):
         return self.indexes[0:self.__len__() * self.batch_size]
@@ -724,9 +727,11 @@ class DataGeneratorRF(keras.utils.Sequence):
         altaz = np.empty([self.batch_size, 2], dtype=float)
         tgradient = np.empty([self.batch_size, 2], dtype=float)
         hillas = np.empty([self.batch_size, 13], dtype=float)
-        # disp = np.empty([self.batch_size, 2], dtype=float)
+        disp = np.empty([self.batch_size, 2], dtype=float)
 
         boundary, picture, min_neighbors = self.cleaning_level['LSTCam']
+
+        point = AltAz(alt=70 * u.deg, az=0 * u.deg)
 
         # Generate data
         for i, row in enumerate(indexes):
@@ -781,16 +786,25 @@ class DataGeneratorRF(keras.utils.Sequence):
             tgradient[i, 0] = timing['slope'] * u.m
             tgradient[i, 1] = timing['intercept']
 
-            # disp_container = disp_parameters(h, altaz[i, 0] * u.m, altaz[i, 1] * u.m)
+            src = NominalFrame(origin=point, delta_az=altaz[i, 1] * u.deg, delta_alt=altaz[i, 0] * u.deg)
+            source_direction = src.transform_to(AltAz)
 
-            # disp[i, 0] = disp_container.dx / u.m
-            # disp[i, 1] = disp_container.dy / u.m
+            src_pos = sky_to_camera(source_direction.alt,
+                                    source_direction.az,
+                                    28 * u.m,
+                                    70 * u.deg,
+                                    0 * u.deg)
+
+            disp_container = disp_parameters(hillas=h, source_pos_x=src_pos.x, source_pos_y=src_pos.y)
+
+            disp[i, 0] = disp_container.dx / u.m
+            disp[i, 1] = disp_container.dy / u.m
 
             y[i] = int(row[2])
 
             h5f.close()
 
-        return y, energy, altaz, tgradient, hillas # , disp
+        return y, energy, altaz, tgradient, hillas, disp
 
 
 class DataGeneratorChain(keras.utils.Sequence):

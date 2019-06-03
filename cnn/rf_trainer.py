@@ -6,16 +6,16 @@ import pandas as pd
 from astropy import units as u
 from astropy.coordinates import AltAz
 from ctapipe.coordinates.nominal_frame import NominalFrame
-from ctapipe.io.containers import HillasParametersContainer
 from keras.utils.data_utils import OrderedEnqueuer
-from tqdm import tqdm
 from keras.utils.generic_utils import Progbar
+from matplotlib.colors import LogNorm
 from scipy.stats import norm
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve, mean_absolute_error
+from tqdm import tqdm
 
 from generators import DataGeneratorRF
-from lstchain.reco.utils import sky_to_camera, disp_parameters, reco_source_position_sky
+from lstchain.reco.utils import reco_source_position_sky
 from utils import get_all_files
 
 if __name__ == "__main__":
@@ -36,7 +36,8 @@ if __name__ == "__main__":
     test_generator = DataGeneratorRF(test_files, batch_size=32, shuffle=True)
 
     train_cols = ['label', 'mc_energy', 'd_alt', 'd_az', 'time_gradient', 'intercept', 'intensity', 'width', 'length',
-                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage2_intensity', 'n_islands', 'x', 'y']
+                  'wl', 'phi', 'psi', 'skewness', 'kurtosis', 'r', 'leakage2_intensity', 'n_islands', 'x', 'y',
+                  'disp_dx', 'disp_dy']
     pred_cols = ['gammanes', 'mc_energy_reco', 'd_alt_reco', 'd_az_reco']
 
     # ------------------------------- TRAINING DATA ---------------------------- #
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     print('Retrieving training data...')
     steps_done = 0
     steps = len(training_generator)
-    steps = 200
+    steps = 300
 
     enqueuer = OrderedEnqueuer(training_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -56,9 +57,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas, = generator_output
+        y, energy, altaz, tgradient, hillas, disp, = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -77,7 +78,7 @@ if __name__ == "__main__":
     print('Retrieving testing data...')
     steps_done = 0
     steps = len(test_generator)
-    steps = 200
+    steps = 300
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -89,9 +90,9 @@ if __name__ == "__main__":
 
     while steps_done < steps:
         generator_output = next(output_generator)
-        y, energy, altaz, tgradient, hillas = generator_output
+        y, energy, altaz, tgradient, hillas, disp = generator_output
 
-        batch = np.concatenate((y, energy, altaz, tgradient, hillas), axis=1)
+        batch = np.concatenate((y, energy, altaz, tgradient, hillas, disp), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1
@@ -180,7 +181,9 @@ if __name__ == "__main__":
     # ------------------------------- REGRESSION ---------------------------- #
 
     # GET RID OF PROTONS BEFORE REGRESSION TRAINING
+    print('Training dataset BEFORE getting rid of the protons', train_df.shape)
     train_df = train_df[train_df['label'] == 1]
+    print('Training dataset AFTER getting rid of the protons', train_df.shape)
 
     """
     Trains two Random Forest regressors for Energy and disp_norm
@@ -241,6 +244,8 @@ if __name__ == "__main__":
 
     point = AltAz(alt=70 * u.deg, az=0 * u.deg)
 
+    """
+
     # add two columns to train_df
     train_df["disp_dx"] = np.nan
     train_df["disp_dy"] = np.nan
@@ -273,6 +278,8 @@ if __name__ == "__main__":
         row["disp_dx"] = disp.dx
         row["disp_dy"] = disp.dy
 
+    """
+
     print("Training Random Forest Regressor for disp Reconstruction...")
 
     reg_disp = RandomForestRegressor(**random_forest_regressor_args)
@@ -284,6 +291,10 @@ if __name__ == "__main__":
 
     test_df["disp_dx_reco"] = dxdy_reco[:, 0]
     test_df["disp_dy_reco"] = dxdy_reco[:, 1]
+
+    # force convert these two columns to numeric
+    test_df['d_alt_reco'] = pd.to_numeric(test_df['d_alt_reco'])
+    test_df['d_az_reco'] = pd.to_numeric(test_df['d_az_reco'])
 
     for index, row in tqdm(test_df.iterrows()):
         altaz_reco = reco_source_position_sky(row['x'] * u.m,
@@ -304,14 +315,18 @@ if __name__ == "__main__":
         # print('source_direction_reco.delta_alt', source_direction_reco.delta_alt / u.deg)
 
         # row['d_alt_reco'] = (source_direction_reco.delta_alt / u.deg)
-        test_df.ix[index, 'd_alt_reco'] = (source_direction_reco.delta_alt / u.deg)
-        test_df.ix[index, 'd_az_reco'] = (source_direction_reco.delta_az / u.deg)
+        test_df.ix[index, 'd_alt_reco'] = source_direction_reco.delta_alt.value
+        test_df.ix[index, 'd_az_reco'] = source_direction_reco.delta_az.value
         # row['d_az_reco'] = (source_direction_reco.delta_az / u.deg)
 
         # print('row[d_alt_reco]', row['d_alt_reco'])
 
     # src_pos_x_reco, src_pos_y_reco = disp_to_pos(test_df["disp_dx_reco"], test_df["disp_dy_reco"], test_df['x'],
     #                                             test_df['y'])
+
+    # convert object type to numeric type
+    # test_df['d_alt_reco'] = pd.to_numeric(test_df['d_alt_reco'], errors='coerce')
+    # test_df['d_az_reco'] = pd.to_numeric(test_df['d_az_reco'], errors='coerce')
 
     print('################# TEST DF #################')
     print(test_df)
@@ -353,7 +368,8 @@ if __name__ == "__main__":
     # histogram 2d
     plt.figure()
 
-    hE = plt.hist2d(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy_reco'], bins=100)
+    hE = plt.hist2d(test_df_for_performances['mc_energy'], test_df_for_performances['mc_energy_reco'], bins=100,
+                    norm=LogNorm())
     plt.colorbar(hE[3])
     plt.xlabel('$log_{10}E_{gammas}[TeV]$', fontsize=15)
     plt.ylabel('$log_{10}E_{rec}[TeV]$', fontsize=15)
@@ -428,7 +444,9 @@ if __name__ == "__main__":
 
     # ------------------------------- DIRECTION PLOTS -------------------------------- #
 
-    plt.close('all')
+    print('#####################data typessss', test_df_for_performances.dtypes)
+
+    # plt.close('all')
 
     n_rows = 6  # how many rows figures
     n_cols = 2  # how many cols figures
@@ -449,11 +467,13 @@ if __name__ == "__main__":
             # df with ground truth between edges
             edge1 = edges[n_cols * i + j]
             edge2 = edges[n_cols * i + j + 1]
-            dfbe = test_df_for_performances[
-                (test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
+            print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
+            print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
+            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             theta2 = (dfbe['d_alt'] - dfbe['d_alt_reco']) ** 2 + (dfbe['d_az'] - dfbe['d_az_reco']) ** 2
+            # print(theta2.values)
             total = len(theta2)
             hist = np.histogram(theta2, bins=1000)
             for k in range(0, len(hist[0]) + 1):
@@ -464,7 +484,9 @@ if __name__ == "__main__":
                     print('Fraction:', fraction)
                     theta2_68 = np.append(theta2_68, hist[1][k])
                     break
+            print('inner loop done')
             n, bins, patches = plt.hist(theta2, bins=100, range=(0, hist[1][k + 1]))
+            # n, bins, patches = plt.hist(theta2.values, bins=10, range=(0, hist[1][k]))
             plt.axvline(hist[1][k], color='r', linestyle='dashed', linewidth=1)
             plt.yscale('log', nonposy='clip')
             plt.xlabel(r'$\theta^{2}(º)$', fontsize=10)
