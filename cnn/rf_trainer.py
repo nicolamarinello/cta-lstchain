@@ -122,7 +122,6 @@ if __name__ == "__main__":
                 'r',
                 'leakage2_intensity',
                 'n_islands',
-                'time_gradient',
                 'intercept']
 
     # ------------------------------- CLASSIFICATION ---------------------------- #
