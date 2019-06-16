@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 def test_plots(pkl, feature):
@@ -90,11 +90,13 @@ def test_plots(pkl, feature):
         np.savez(folder + '/mus_sigmas.npz', mus=mus, sigmas=sigmas, bin_centers=bin_centers)
 
         mae_energy = mean_absolute_error(df['GroundTruth'], df['Predicted'])
+        mse_energy = mean_squared_error(df['GroundTruth'], df['Predicted'])
         mape_energy = np.mean(np.abs((df['GroundTruth'] - df['Predicted']) / df['GroundTruth'])) * 100
 
         # writing summary on file
-        f = open(folder + '/mae_mape.txt', 'w')
+        f = open(folder + '/mae_mse_mape.txt', 'w')
         f.write('MAE: ' + str(mae_energy) + '\n')
+        f.write('MSE: ' + str(mse_energy) + '\n')
         f.write('MAPE: ' + str(mape_energy))
         f.close()
 
@@ -173,9 +175,13 @@ def test_plots(pkl, feature):
         mae_direction = mean_absolute_error([df['src_x'], df['src_y']],
                                             [df['src_x_rec'], df['src_y_rec']])
 
+        mse_direction = mean_squared_error([df['src_x'], df['src_y']],
+                                           [df['src_x_rec'], df['src_y_rec']])
+
         # writing summary on file
         f = open(folder + '/mae.txt', 'w')
         f.write('MAE: ' + str(mae_direction))
+        f.write('\nMSE: ' + str(mse_direction))
         f.close()
 
     print('Plots done')

@@ -50,13 +50,13 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     p_es = 50  # patience
 
     # sgd
-    lr = 0.0001  # lr
+    lr = 0.01  # lr
     decay = 1e-4  # decay
     momentum = 0.9  # momentum
     nesterov = True
 
     # adam
-    a_lr = 0.0001
+    a_lr = 0.001
     a_beta_1 = 0.9
     a_beta_2 = 0.999
     a_epsilon = None
@@ -71,7 +71,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     amsbound = False
 
     # rmsprop
-    r_lr = 0.01
+    r_lr = 0.1
     r_rho = 0.9
     r_epsilon = None
     r_decay = 0.0
@@ -199,9 +199,11 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     outcomes = 1
     # loss = 'mean_absolute_percentage_error'
     loss = 'mean_absolute_error'
+    # loss = 'mean_squared_error'
     if feature == 'xy':
         outcomes = 2
         loss = 'mean_absolute_error'
+        # loss = 'mean_squared_error'
 
     # keras.backend.set_image_data_format('channels_first')
 

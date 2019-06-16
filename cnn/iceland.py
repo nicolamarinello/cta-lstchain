@@ -4,7 +4,7 @@ from regressor_training import regressor_training_main
 
 if __name__ == "__main__":
 
-    which = 'thesisclassretrain-recovery'
+    which = 'energy_mse'
 
     if which == 'resnets':
 
@@ -453,3 +453,71 @@ if __name__ == "__main__":
                                 feature='xy',
                                 workers=4,
                                 test_dirs=testd_regr)
+
+    elif which == 'direction_mse':
+
+        traind_regr = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp']
+
+        validd_regr = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation']
+
+        testd_regr = ['/ssdraptor/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp']
+
+        models = ['BaseLine', 'BaseLine', 'ResNetFSE', 'ResNetH']
+
+        times = [False, True, True, True]
+
+        for i, m in enumerate(models):
+
+            regressor_training_main(folders=traind_regr,
+                                    val_folders=validd_regr,
+                                    model_name=m,
+                                    time=times[i],
+                                    epochs=50,
+                                    batch_size=128,
+                                    opt='adam',
+                                    val=True,
+                                    red=1,
+                                    lropf=True,
+                                    sd=False,
+                                    clr=False,
+                                    es=False,
+                                    feature='xy',
+                                    workers=4,
+                                    test_dirs=testd_regr)
+
+            K.clear_session()
+
+    elif which == 'energy_mse':
+
+        traind_regr = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp']
+
+        validd_regr = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation']
+
+        testd_regr = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp']
+
+        models = ['DenseNet', 'BaseLine', 'ResNetH', 'ResNetFSEFixed']
+        times = [True, False, True, True]
+        bs = [64, 128, 128, 128]
+
+        for i, m in enumerate(models):
+
+            regressor_training_main(folders=traind_regr,
+                                    val_folders=validd_regr,
+                                    model_name=m,
+                                    time=times[i],
+                                    epochs=50,
+                                    batch_size=bs[i],
+                                    opt='adam',
+                                    val=True,
+                                    red=1,
+                                    lropf=True,
+                                    sd=False,
+                                    clr=False,
+                                    es=False,
+                                    feature='energy',
+                                    workers=4,
+                                    test_dirs=testd_regr)
+
+            K.clear_session()
+
+

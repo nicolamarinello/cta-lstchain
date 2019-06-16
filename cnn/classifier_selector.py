@@ -5,7 +5,7 @@ from keras.utils.data_utils import get_file
 
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
     ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, NASNetLarge, \
-    NASNetA, ResNetFSEA, BaseLine, ResNeXt, VGG16
+    NASNetA, ResNetFSEA, BaseLine, ResNeXt, VGG16, ResNetFSEFixed
 
 DENSENET_169_WEIGHTS_PATH_NO_TOP = r'https://github.com/titu1994/DenseNet/releases/download/v3.0/DenseNet-BC-169-32-no-top.h5'
 
@@ -293,6 +293,13 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         wd = 1e-4
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetFSE(channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNetFSEFixed':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetFSEFixed(channels, img_rows, img_cols, wd)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)

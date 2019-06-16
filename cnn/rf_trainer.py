@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print('Retrieving training data...')
     steps_done = 0
     steps = len(training_generator)
-    steps = 300
+    steps = 8000
 
     enqueuer = OrderedEnqueuer(training_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -71,14 +71,24 @@ if __name__ == "__main__":
     # try to apply more cut (> 200)
     # train_df = train_df[train_df['intensity'] > 200]
 
+    print('Training set size before removing duplicates: ', train_df.shape)
+    train_df.drop_duplicates()
+    print('Training set size after removing duplicates: ', train_df.shape)
     print(train_df)
+
+    # ------------------------------- CREATE FOLDER ---------------------------------- #
+
+    root_dir = 'RF_results'
+    mkdir(root_dir)
+
+    train_df.to_pickle(root_dir + '/RF_train-table.pkl')
 
     # ------------------------------- TEST DATA ---------------------------- #
 
     print('Retrieving testing data...')
     steps_done = 0
     steps = len(test_generator)
-    steps = 300
+    steps = 8000
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=12, max_queue_size=10)
@@ -105,6 +115,10 @@ if __name__ == "__main__":
     # test_df = test_df[test_df['intensity'] > 200]
 
     pred_df = pd.DataFrame(columns=pred_cols)
+
+    print('Test set size before removing duplicates: ', test_df.shape)
+    test_df.drop_duplicates()
+    print('Test set size after removing duplicates: ', test_df.shape)
 
     # ------------------------------- RF FEATURES ---------------------------- #
 
@@ -219,6 +233,24 @@ if __name__ == "__main__":
                                     'warm_start': False,
                                     }
 
+    random_forest_regressor_args_dir = {'max_depth': 50,
+                                        'min_samples_leaf': 2,
+                                        'n_jobs': 4,
+                                        'n_estimators': 150,
+                                        'bootstrap': True,
+                                        'criterion': 'mae',
+                                        'max_features': 'auto',
+                                        'max_leaf_nodes': None,
+                                        'min_impurity_decrease': 0.0,
+                                        'min_impurity_split': None,
+                                        'min_samples_split': 2,
+                                        'min_weight_fraction_leaf': 0.0,
+                                        'oob_score': False,
+                                        'random_state': 42,
+                                        'verbose': 0,
+                                        'warm_start': False,
+                                        }
+
     print("Given features: ", features)
     print("Number of events for training: ", train_df.shape[0])
 
@@ -281,7 +313,7 @@ if __name__ == "__main__":
 
     print("Training Random Forest Regressor for disp Reconstruction...")
 
-    reg_disp = RandomForestRegressor(**random_forest_regressor_args)
+    reg_disp = RandomForestRegressor(**random_forest_regressor_args_dir)
     reg_disp.fit(train_df[features], train_df[['disp_dx', 'disp_dy']])
 
     print("Random Forest for direction reco trained!")
@@ -330,7 +362,18 @@ if __name__ == "__main__":
     print('################# TEST DF #################')
     print(test_df)
 
-    # ################# calculate MAE & MAPE only on gammas ################### #
+    # ------------------------------- print features importance & distributions ---------------------------------- #
+
+    feature_importances = pd.DataFrame(reg_disp.feature_importances_,
+                                       index=train_df[features].columns,
+                                       columns=['importance']).sort_values('importance', ascending=False)
+
+    print(feature_importances)
+
+    hist = train_df[features].hist(bins=50)
+    plt.savefig('features_distributions.png')
+
+    # ------------------------------- calculate MAE & MAPE only on gammas ---------------------------------- #
 
     # remove any lines that contains NaNs
     # test_df.dropna(how='any')
@@ -345,11 +388,6 @@ if __name__ == "__main__":
     mae_direction = mean_absolute_error([test_df_for_performances['d_alt'], test_df_for_performances['d_az']],
                                         [test_df_for_performances['d_alt_reco'], test_df_for_performances['d_az_reco']])
     # ################################################################## #
-
-    # ------------------------------- CREATE FOLDER ---------------------------------- #
-
-    root_dir = 'RF_results'
-    mkdir(root_dir)
 
     # ------------------------------- CLASSIFICATION PLOTS ---------------------------- #
 
@@ -468,7 +506,8 @@ if __name__ == "__main__":
             edge2 = edges[n_cols * i + j + 1]
             print('\nEdge1: ', edge1, ' Idxs: ', n_cols * i + j)
             print('Edge2: ', edge2, ' Idxs: ', n_cols * i + j + 1)
-            dfbe = test_df_for_performances[(test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
+            dfbe = test_df_for_performances[
+                (test_df_for_performances['mc_energy'] >= edge1) & (test_df_for_performances['mc_energy'] < edge2)]
             # histogram
             subplot = plt.subplot(n_rows, n_cols, n_cols * i + j + 1)
             theta2 = (dfbe['d_alt'] - dfbe['d_alt_reco']) ** 2 + (dfbe['d_az'] - dfbe['d_az_reco']) ** 2

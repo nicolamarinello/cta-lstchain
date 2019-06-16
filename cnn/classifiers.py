@@ -1615,6 +1615,199 @@ class ResNetFSE:
 
         return model
 
+class ResNetFSEFixed:
+
+    def __init__(self, channels, img_rows, img_cols, wd):
+
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.wd = wd
+
+    def get_model(self):
+
+        wd = self.wd
+
+        def resnet_layer(inputs,
+                         num_filters=16,
+                         kernel_size=3,
+                         strides=1,
+                         activation='relu',
+                         batch_normalization=True,
+                         conv_first=True):
+            """2D Convolution-Batch Normalization-Activation stack builder
+            # Arguments
+                inputs (tensor): input tensor from input image or previous layer
+                num_filters (int): Conv2D number of filters
+                kernel_size (int): Conv2D square kernel dimensions
+                strides (int): Conv2D square stride dimensions
+                activation (string): activation name
+                batch_normalization (bool): whether to include batch normalization
+                conv_first (bool): conv-bn-activation (True) or
+                    bn-activation-conv (False)
+            # Returns
+                x (tensor): tensor as input to the next layer
+            """
+            conv = Conv2D(num_filters,
+                          kernel_size=kernel_size,
+                          strides=strides,
+                          padding='same',
+                          kernel_initializer='he_normal',
+                          kernel_regularizer=l2(wd))
+
+            x = inputs
+            if conv_first:
+                x = conv(x)
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+            else:
+                if batch_normalization:
+                    x = BatchNormalization()(x)
+                if activation is not None:
+                    x = Activation(activation)(x)
+                x = conv(x)
+            return x
+
+        def squeeze_excite_block(input, ratio=16):
+            ''' Create a channel-wise squeeze-excite block
+            Args:
+                input: input tensor
+                filters: number of output filters
+            Returns: a keras tensor
+            References
+            -   [Squeeze and Excitation Networks](https://arxiv.org/abs/1709.01507)
+            '''
+            init = input
+            channel_axis = 1 if K.image_data_format() == "channels_first" else -1
+            filters = init._keras_shape[channel_axis]
+            se_shape = (1, 1, filters)
+
+            se = GlobalAveragePooling2D()(init)
+            se = Reshape(se_shape)(se)
+            se = Dense(filters // ratio, activation='relu', kernel_initializer='he_normal', use_bias=False)(se)
+            se = Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False)(se)
+
+            if K.image_data_format() == 'channels_first':
+                se = Permute((3, 1, 2))(se)
+
+            x = multiply([init, se])
+            return x
+
+        """
+        Total params: 1,109,585
+        Trainable params: 1,106,673
+        Non-trainable params: 2,912  
+        """
+
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        inputs = Input(shape=input_shape)  # output (1, 100, 100)
+        y = resnet_layer(inputs=inputs, num_filters=16, strides=1)  # output (16, 100, 100)
+
+        # stack 0
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=16)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=16)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=16, strides=1)
+        x = resnet_layer(inputs=x, num_filters=16, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=16)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 1
+        x = resnet_layer(inputs=y, num_filters=32, strides=2)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=32, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=32)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=32)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=32, strides=1)
+        x = resnet_layer(inputs=x, num_filters=32, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=32)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=64, strides=2)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=64, kernel_size=1, strides=2, activation=None, batch_normalization=False)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=64)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=64)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=64, strides=1)
+        x = resnet_layer(inputs=x, num_filters=64, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=64)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        # stack 2
+        x = resnet_layer(inputs=y, num_filters=128, strides=2)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        # linear projection
+        y = resnet_layer(inputs=y, num_filters=128, kernel_size=1, strides=2, activation=None,
+                         batch_normalization=False)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=128)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=128)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = resnet_layer(inputs=y, num_filters=128, strides=1)
+        x = resnet_layer(inputs=x, num_filters=128, strides=1, activation=None)
+        # squeeze and excite block
+        x = squeeze_excite_block(x, ratio=128)
+        x = keras.layers.add([x, y])
+        y = Activation('relu')(x)
+
+        x = AveragePooling2D(pool_size=2)(y)
+        y = Flatten()(x)
+        outputs = Dense(1, activation='sigmoid', kernel_initializer='he_normal')(y)
+        model = Model(inputs=inputs, outputs=outputs)
+
+        return model
+
 
 class ResNetFSEA:
 

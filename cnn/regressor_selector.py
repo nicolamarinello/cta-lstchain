@@ -1,7 +1,7 @@
 import sys
 
 from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet, ResNetFSE, BaseLine, \
-    ResNetHSE, VGG16
+    ResNetHSE, VGG16, ResNetFSEFixed
 
 
 def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, outcomes):
@@ -101,6 +101,13 @@ def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, out
         wd = 1e-4
         hype_print += '\n' + 'Weight decay: ' + str(wd)
         resnet = ResNetFSE(outcomes, channels, img_rows, img_cols, wd)
+        model = resnet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNetFSEFixed':
+        wd = 1e-4
+        hype_print += '\n' + 'Weight decay: ' + str(wd)
+        resnet = ResNetFSEFixed(outcomes, channels, img_rows, img_cols, wd)
         model = resnet.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
