@@ -4,7 +4,7 @@ from regressor_training import regressor_training_main
 
 if __name__ == "__main__":
 
-    which = 'energy_mse'
+    which = 'energy_mape'
 
     if which == 'resnets':
 
@@ -487,26 +487,24 @@ if __name__ == "__main__":
 
             K.clear_session()
 
-    elif which == 'energy_mse':
+    elif which == 'energy_mape':
 
-        traind_regr = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp']
+        traind_regr = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp']
 
-        validd_regr = ['/home/nmarinel/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation']
+        validd_regr = ['/ssdraptor/simulations/Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp/validation']
 
-        testd_regr = ['/mnt/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp']
+        testd_regr = ['/ssdraptor/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp']
 
-        models = ['DenseNet', 'BaseLine', 'ResNetH', 'ResNetFSEFixed']
-        times = [True, False, True, True]
-        bs = [64, 128, 128, 128]
+        models = ['ResNetH', 'ResNetFSE']
 
         for i, m in enumerate(models):
 
             regressor_training_main(folders=traind_regr,
                                     val_folders=validd_regr,
                                     model_name=m,
-                                    time=times[i],
+                                    time=True,
                                     epochs=50,
-                                    batch_size=bs[i],
+                                    batch_size=128,
                                     opt='adam',
                                     val=True,
                                     red=1,
