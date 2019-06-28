@@ -1,7 +1,8 @@
 import sys
 
 from regressors import RegressorV2, RegressorV3, ResNetF, ResNetH, ResNetXt, ResNetI, DenseNet, ResNetFSE, BaseLine, \
-    ResNetHSE, VGG16, ResNetFSEFixed
+    ResNetHSE, VGG16, ResNetFSEFixed, ResNeXt
+
 
 
 def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, outcomes):
@@ -126,6 +127,15 @@ def regressor_selector(model_name, hype_print, channels, img_rows, img_cols, out
     elif model_name == 'VGG16':
         vgg16 = BaseLine(outcomes, channels, img_rows, img_cols)
         model = vgg16.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'ResNeXt29-4-8':
+        depth = 29
+        cardinality = 4
+        width = 8
+        weight_decay = 5e-4
+        rxt = ResNeXt(outcomes, channels, img_rows, img_cols, depth, cardinality, width, weight_decay)
+        model = rxt.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
     else:

@@ -71,7 +71,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     amsbound = False
 
     # rmsprop
-    r_lr = 0.1
+    r_lr = 0.01
     r_rho = 0.9
     r_epsilon = None
     r_decay = 0.0

@@ -56,6 +56,11 @@ if __name__ == "__main__":
     val_h5files = get_all_files(val_dirs)
     test_h5files = get_all_files(test_dirs)
 
+    # try to use hal of the test files for bias estimation and the other half to correct
+    val_h5files = test_h5files[:int(len(test_h5files)/2)]
+    test_h5files = test_h5files[int(len(test_h5files) / 2):]
+    ######################################################################################
+
     reg_energy = load_model(rege_path)
 
     batch_size = 128
@@ -67,6 +72,7 @@ if __name__ == "__main__":
     print('Inference on validation data...')
     steps_done = 0
     steps = len(validation_generator)
+    # steps = 200
 
     enqueuer = OrderedEnqueuer(validation_generator, use_multiprocessing=True)
     enqueuer.start(workers=4, max_queue_size=10)
@@ -117,7 +123,7 @@ if __name__ == "__main__":
     print('Inference on test data...')
     steps_done = 0
     steps = len(test_generator)
-    steps = 100
+    # steps = 200
 
     enqueuer = OrderedEnqueuer(test_generator, use_multiprocessing=True)
     enqueuer.start(workers=4, max_queue_size=10)
@@ -134,7 +140,7 @@ if __name__ == "__main__":
         e_reco = reg_energy.predict_on_batch(x)
 
         # bias estimation and correction
-        b = f(np.exp(e_reco))
+        b = f(10**e_reco)
         e_reco_corr = e_reco+np.log10(b)
 
         e_reco_corr = np.log10(10**e_reco + b * 10**e_reco)

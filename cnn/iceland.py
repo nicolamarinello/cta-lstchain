@@ -495,17 +495,18 @@ if __name__ == "__main__":
 
         testd_regr = ['/ssdraptor/simulations/Paranal_gamma_North_20deg_3HB9_DL1_ML1_interp']
 
-        models = ['ResNetH', 'ResNetFSE']
+        models = ['BaseLine', 'ResNetH', 'ResNetFSE']
+        times = [False, True, True]
 
         for i, m in enumerate(models):
 
             regressor_training_main(folders=traind_regr,
                                     val_folders=validd_regr,
                                     model_name=m,
-                                    time=True,
+                                    time=times[i],
                                     epochs=50,
                                     batch_size=128,
-                                    opt='adam',
+                                    opt='rmsprop',
                                     val=True,
                                     red=1,
                                     lropf=True,

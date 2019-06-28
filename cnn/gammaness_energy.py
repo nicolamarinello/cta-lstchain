@@ -27,10 +27,10 @@ if __name__ == "__main__":
     sep = load_model(sep_path)
 
     batch_size = 128
-    print('Building val & test generator...')
+    print('Building test generator...')
     test_generator = DataGeneratorChain(test_h5files, batch_size=batch_size, arrival_time=True, shuffle=True)
 
-    print('Inference on validation data...')
+    print('Inference on test data...')
     steps_done = 0
     steps = len(test_generator)
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     progbar = Progbar(target=steps)
 
-    table = np.array([]).reshape(0, 2)
+    table = np.array([]).reshape(0, 3)
 
     while steps_done < steps:
         generator_output = next(output_generator)

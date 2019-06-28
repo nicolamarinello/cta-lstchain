@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.regularizers import l2
 
 import densenetlst
+import resnext
 
 
 class RegressorV2:
@@ -1586,3 +1587,27 @@ class VGG16:
         self.model = models.Model(inputs, x, name='vgg16')
 
         return self.model
+
+
+class ResNeXt:
+
+    def __init__(self, outcomes, channels, img_rows, img_cols, depth, cardinality, width, weight_decay):
+        self.outcomes = outcomes
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.depth = depth
+        self.cardinality = cardinality
+        self.width = width
+        self.weight_decay = weight_decay
+
+    def get_model(self):
+        model = resnext.ResNext((self.img_rows, self.img_cols, self.channels),
+                                self.depth,
+                                self.cardinality,
+                                self.width,
+                                self.weight_decay,
+                                classes=self.outcomes,
+                                activation='linear')
+
+        return model

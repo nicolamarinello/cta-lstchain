@@ -5,7 +5,7 @@ from keras.utils.data_utils import get_file
 
 from classifiers import ClassifierV1, ClassifierV2, ClassifierV3, ResNet, ResNetA, ResNetB, ResNetC, ResNetD, ResNetE, \
     ResNetF, ResNetG, ResNetH, DenseNet, ResNetFSE, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, NASNetLarge, \
-    NASNetA, ResNetFSEA, BaseLine, ResNeXt, VGG16, ResNetFSEFixed
+    NASNetA, ResNetFSEA, BaseLine, ResNeXt, VGG16, ResNetFSEFixed, DenseNetSE
 
 DENSENET_169_WEIGHTS_PATH_NO_TOP = r'https://github.com/titu1994/DenseNet/releases/download/v3.0/DenseNet-BC-169-32-no-top.h5'
 
@@ -383,6 +383,34 @@ def select_classifier(model_name, hype_print, channels, img_rows, img_cols):
         model = rxt.get_model()
         params = model.count_params()
         hype_print += '\n' + 'Model params: ' + str(params)
+    elif model_name == 'DenseNetSE':
+        depth = 64
+        growth_rate = 12
+        bottleneck = True
+        reduction = 0.5
+        # subsample_initial_block = True
+        # wd = 1e-5
+        # dropout_rate = 0
+        densenet = DenseNetSE(channels,
+                              img_rows,
+                              img_cols,
+                              depth=depth,
+                              growth_rate=growth_rate,
+                              bottleneck=bottleneck,
+                              reduction=reduction,
+                              # dropout_rate=dropout_rate,
+                              # subsample_initial_block=subsample_initial_block,
+                              )
+        model = densenet.get_model()
+        params = model.count_params()
+        hype_print += '\n' + 'Model params: ' + str(params)
+        hype_print += '\n' + 'Depth: ' + str(depth)
+        hype_print += '\n' + 'Growth rate: ' + str(growth_rate)
+        hype_print += '\n' + 'Bottleneck: ' + str(bottleneck)
+        hype_print += '\n' + 'Reduction: ' + str(reduction)
+        # hype_print += '\n' + 'dropout_rate: ' + str(dropout_rate)
+        # hype_print += '\n' + 'subsample_initial_block: ' + str(subsample_initial_block)
+        # hype_print += '\n' + 'Weight decay: ' + str(wd)
     else:
         print('Model name not valid')
         sys.exit(1)

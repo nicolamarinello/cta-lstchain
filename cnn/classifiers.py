@@ -1,17 +1,17 @@
 import keras
 import keras_contrib.applications
 from keras import backend as K
-from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization, \
-    Activation, Input, Reshape, multiply, GlobalAveragePooling2D, Permute
-from keras.models import Model
 from keras import layers
 from keras import models
+from keras.layers import Dropout, Flatten, Dense, Conv2D, MaxPooling2D, AveragePooling2D, BatchNormalization, \
+    Activation, Input, Reshape, multiply, GlobalAveragePooling2D, Permute
 from keras.models import Model
 from keras.models import Sequential
 from keras.regularizers import l2
 
 import densenetlst
 import resnext
+import sedensenetlst
 
 
 class ClassifierV1:
@@ -1615,6 +1615,7 @@ class ResNetFSE:
 
         return model
 
+
 class ResNetFSEFixed:
 
     def __init__(self, channels, img_rows, img_cols, wd):
@@ -2207,7 +2208,6 @@ class VGG16:
         self.model = Sequential()  # define the network model
 
     def get_model(self):
-
         input_shape = (self.img_rows, self.img_cols, self.channels)
 
         inputs = Input(shape=input_shape)
@@ -2243,7 +2243,7 @@ class VGG16:
         x = layers.MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
 
         # Block 4
-        x = layers.Conv2D(512, (3, 3),padding='same', name='block4_conv1')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', name='block4_conv1')(x)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = layers.Conv2D(512, (3, 3), padding='same', name='block4_conv2')(x)
@@ -2280,3 +2280,45 @@ class VGG16:
         self.model = models.Model(inputs, x, name='vgg16')
 
         return self.model
+
+
+class DenseNetSE:
+
+    def __init__(self, channels, img_rows, img_cols, depth=40, nb_dense_block=3, growth_rate=12, nb_filter=-1,
+                 nb_layers_per_block=-1, bottleneck=False, reduction=0.0, dropout_rate=0.0, weight_decay=1e-4,
+                 subsample_initial_block=False, include_top=True):
+        self.channels = channels
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.depth = depth
+        self.nb_dense_block = nb_dense_block
+        self.growth_rate = growth_rate
+        self.nb_filter = nb_filter
+        self.nb_layers_per_block = nb_layers_per_block
+        self.bottleneck = bottleneck
+        self.reduction = reduction
+        self.dropout_rate = dropout_rate
+        self.weight_decay = weight_decay
+        self.subsample_initial_block = subsample_initial_block
+        self.include_top = include_top
+
+    def get_model(self):
+        input_shape = (self.img_rows, self.img_cols, self.channels)
+
+        model = sedensenetlst.DenseNet(input_shape=input_shape,
+                                       depth=self.depth,
+                                       nb_dense_block=self.nb_dense_block,
+                                       growth_rate=self.growth_rate,
+                                       nb_filter=self.nb_filter,
+                                       nb_layers_per_block=self.nb_layers_per_block,
+                                       bottleneck=self.bottleneck,
+                                       reduction=self.reduction,
+                                       dropout_rate=self.dropout_rate,
+                                       subsample_initial_block=self.subsample_initial_block,
+                                       weight_decay=self.weight_decay,
+                                       classes=1,
+                                       activation='sigmoid',
+                                       include_top=self.include_top)
+
+        return model
+
