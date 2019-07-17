@@ -59,6 +59,10 @@ def tester(folders, mdl, batch_size, time, feature, workers):
 
     elif feature == 'xy':
 
+        #REGRESSOR FOR ENERGY PREDITCION
+        e_regr_path = '/home/nmarinel/ctasoft/cta-lstchain/cnn/ResNetFSE_44_0.12432_0.12943.h5'
+        reg_energy = load_model(e_regr_path)
+
         pr_feature = predict
         gt_feature = np.array(gt_feature).reshape(steps * batch_size, 2)
 
@@ -77,6 +81,7 @@ def tester(folders, mdl, batch_size, time, feature, workers):
         # retrieve ground truth
         print('Retrieving ground truth...')
         gt_energy = []
+        pr_energy = []
         steps_done = 0
         steps = len(energy_generator)
 
@@ -88,23 +93,29 @@ def tester(folders, mdl, batch_size, time, feature, workers):
 
         while steps_done < steps:
             generator_output = next(output_generator)
-            _, y = generator_output
+            x, y = generator_output
             gt_energy.append(y)
+
+            energy_reco = reg_energy.predict_on_batch(x)
+            pr_energy.append(energy_reco)
+
             # print('steps_done', steps_done)
             # print(y)
             steps_done += 1
             progbar.update(steps_done)
 
         gt_energy = np.array(gt_energy).reshape(steps * batch_size)
+        pr_energy = np.array(pr_energy).reshape(steps * batch_size)
         df['energy'] = gt_energy
+        df['energy_reco'] = pr_energy
 
         print('gt_energy shape: ', gt_energy.shape)
 
-    res_file = mdl + '_test.pkl'
+    res_file = mdl + '_test_new.pkl'
 
     df.to_pickle(res_file)
 
-    print('Results saved in ' + mdl + '_test.pkl')
+    print('Results saved in ' + mdl + '_test_new.pkl')
 
     return res_file
 
