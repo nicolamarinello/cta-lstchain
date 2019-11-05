@@ -4,7 +4,6 @@
 Camera calibration module.
 """
 
-from .flatfield import *
-from .pedestals import *
 from .calib import *
 from .r0 import *
+from .drs4 import *

@@ -6,7 +6,6 @@ Usage:
 
 "import dl1_to_dl2"
 """
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -15,95 +14,43 @@ from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
 import os
 from . import utils
-from astropy.utils import deprecated
-from ..io import read_configuration_file
+from . import disp
+from ..io import standard_config, replace_config
+import astropy.units as u
+from ..io.io import dl1_params_lstcam_key
 
-
-# Standard models configurations - to be moved later in a default configuration file
-
-random_forest_regressor_args = {'max_depth': 50,
-                                'min_samples_leaf': 5,
-                                'n_jobs': 4,
-                                'n_estimators': 100,
-                                'bootstrap': True,
-                                'criterion': 'mse',
-                                'max_features': 'auto',
-                                'max_leaf_nodes': None,
-                                'min_impurity_decrease': 0.0,
-                                'min_impurity_split': None,
-                                'min_samples_split': 2,
-                                'min_weight_fraction_leaf': 0.0,
-                                'oob_score': False,
-                                'random_state': 42,
-                                'verbose': 0,
-                                'warm_start': False,
-                                }
-
-
-random_forest_classifier_args = {'max_depth': 50,
-                                 'min_samples_leaf': 2,
-                                 'n_jobs': 4,
-                                 'n_estimators': 100,
-                                 'criterion': 'gini',
-                                 'min_samples_split': 2,
-                                 'min_weight_fraction_leaf': 0.,
-                                 'max_features': 'auto',
-                                 'max_leaf_nodes': None,
-                                 'min_impurity_decrease': 0.0,
-                                 'min_impurity_split': None,
-                                 'bootstrap': True,
-                                 'oob_score': False,
-                                 'random_state': 42,
-                                 'verbose': 0.,
-                                 'warm_start': False,
-                                 'class_weight': None,
-                                 }
+__all__ = [
+    'train_energy',
+    'train_disp_norm',
+    'train_disp_sign',
+    'train_disp_vector',
+    'train_reco',
+    'train_sep',
+    'build_models',
+    'apply_models',
+]
 
 
 
-@deprecated('31/10/2019', message='Will be removed in a future release')
-def split_traintest(data, proportion, random_state=42):
+def train_energy(train, custom_config={}):
     """
-    Split a dataset in "train" and "test" sets.
-    Actually using `sklearn.model_selection.train_test_split`
-
-    Parameters:
-    -----------
-    data: pandas DataFrame
-    proportion: float
-    Percentage of the total dataset that will be part of the train set.
-
-    Returns:
-    --------
-    train, test - `pandas.DataFrame`
-    """
-    train, test = train_test_split(data, train_size=proportion, random_state=random_state)
-    return train, test
-
-
-def train_energy(train,
-                 features,
-                 model=RandomForestRegressor,
-                 regression_args=random_forest_regressor_args,
-                 config_file=None):
-    """
-    Train a model for the regression of the energy
+    Train a Random Forest Regressor for the regression of the energy
+    TODO: introduce the possibility to use another model
 
     Parameters
     ----------
     train: `pandas.DataFrame`
-    features: list of strings, features to train the model
-    model: `scikit-learn` model with a `fit` method. By default `sklearn.ensemble.RandomForestRegressor`
-    model_args: dictionnary, arguments for the model
-    config_file: str - path to a configuration file. If given, overwrite `model_args`.
+    config: dictionnary containing configuration
 
     Returns
     -------
     The trained model
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        regression_args = config['random_forest_regressor_args']
+
+    config = replace_config(standard_config, custom_config)
+    regression_args = config['random_forest_regressor_args']
+    features = config['regression_features']
+    model = RandomForestRegressor
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
@@ -111,37 +58,32 @@ def train_energy(train,
 
     reg = model(**regression_args)
     reg.fit(train[features],
-                  train['mc_energy'])
+                  train['log_mc_energy'])
 
     print("Model {} trained!".format(model))
     return reg
 
 
-def train_disp_vector(train, features,
-        model=RandomForestRegressor,
-        regression_args=random_forest_regressor_args,
-        config_file=None,
-        predict_features=['disp_dx', 'disp_dy']):
+def train_disp_vector(train, custom_config={}, predict_features=['disp_dx', 'disp_dy']):
     """
-    Train a model for the regression of the disp_norm vector coordinates dx,dy.
+    Train a model (Random Forest Regressor) for the regression of the disp_norm vector coordinates dx,dy.
     Therefore, the model must be able to be applied on a vector of features.
+    TODO: introduce the possibility to use another model
 
     Parameters
     ----------
     train: `pandas.DataFrame`
-    features: list of strings, features to train the model
-    model: `scikit-learn` model with a `fit` method that can be applied to a vector of features.
-    By default `sklearn.ensemble.RandomForestRegressor`
-    regression_args_args: dictionnary, arguments for the model
-    config_file: str - path to a configuration file. If given, overwrites `model_args`.
+    config: dictionnary containing configuration
 
     Returns
     -------
     The trained model
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        regression_args = config['random_forest_regressor_args']
+
+    config = replace_config(standard_config, custom_config)
+    regression_args = config['random_forest_regressor_args']
+    features = config["regression_features"]
+    model = RandomForestRegressor
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
@@ -157,30 +99,24 @@ def train_disp_vector(train, features,
     return reg
 
 
-def train_disp_norm(train, features,
-        model=RandomForestRegressor,
-        regression_args=random_forest_regressor_args,
-        config_file=None,
-        predict_feature='disp_norm'):
+def train_disp_norm(train, custom_config={}, predict_feature='disp_norm'):
     """
     Train a model for the regression of the disp_norm norm
 
     Parameters
     ----------
     train: `pandas.DataFrame`
-    features: list of strings, features to train the model
-    model: `scikit-learn` model with a `fit` method.
-    By default `sklearn.ensemble.RandomForestRegressor`
-    regression_args: dictionnary, arguments for the model
-    config_file: str - path to a configuration file. If given, overwrites `regression_args`.
+    config: dictionnary containing configuration
 
     Returns
     -------
     The trained model
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        regression_args = config['random_forest_regressor_args']
+
+    config = replace_config(standard_config, custom_config)
+    regression_args = config['random_forest_regressor_args']
+    features = config["regression_features"]
+    model = RandomForestRegressor
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
@@ -196,30 +132,24 @@ def train_disp_norm(train, features,
     return reg
 
 
-def train_disp_sign(train, features,
-        model=RandomForestClassifier,
-        classification_args=random_forest_classifier_args,
-        config_file=None,
-        predict_feature='disp_sign'):
+def train_disp_sign(train, custom_config={}, predict_feature='disp_sign'):
     """
     Train a model for the classification of the disp_norm sign
 
     Parameters
     ----------
     train: `pandas.DataFrame`
-    features: list of strings, features to train the model
-    model: `scikit-learn` model with a `fit` method.
-    By default `sklearn.ensemble.RandomForestClassifier`
-    model_args: dictionnary, arguments for the model
-    config_file: str - path to a configuration file. If given, overwrite `model_args`.
+    config: dictionnary containing configuration
 
     Returns
     -------
     The trained model
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        classification_args = config['random_forest_classifier_args']
+
+    config = replace_config(standard_config, custom_config)
+    classification_args = config['random_forest_classifier_args']
+    features = config["classification_features"]
+    model = RandomForestClassifier
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
@@ -236,7 +166,7 @@ def train_disp_sign(train, features,
 
 
 
-def train_reco(train, features, regression_args=random_forest_regressor_args, config_file=None):
+def train_reco(train, custom_config={}):
     """
     Trains two Random Forest regressors for Energy and disp_norm
     reconstruction respectively. Returns the trained RF.
@@ -244,29 +174,26 @@ def train_reco(train, features, regression_args=random_forest_regressor_args, co
     Parameters:
     -----------
     train: `pandas.DataFrame`
-    data set for training the RF
-    features: list of strings
-    List of features to train the RF
-    regression_args: dictionnary
-    config_file: str - path to a configuration file. If given, overwrite `regression_args`.
+    config: dictionnary containing configuration
 
     Returns:
     --------
     RandomForestRegressor: reg_energy
     RandomForestRegressor: reg_disp
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        regression_args = config['random_forest_regressor_args']
 
+    config = replace_config(standard_config, custom_config)
+    regression_args = config['random_forest_regressor_args']
+    features = config["regression_features"]
+    model = RandomForestRegressor
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
     print("Training Random Forest Regressor for Energy Reconstruction...")
 
-    reg_energy = RandomForestRegressor(**regression_args)
+    reg_energy = model(**regression_args)
     reg_energy.fit(train[features],
-                  train['mc_energy'])
+                  train['log_mc_energy'])
 
     print("Random Forest trained!")
     print("Training Random Forest Regressor for disp_norm Reconstruction...")
@@ -280,7 +207,7 @@ def train_reco(train, features, regression_args=random_forest_regressor_args, co
     return reg_energy, reg_disp
 
 
-def train_sep(train, features, classification_args=random_forest_classifier_args, config_file=None):
+def train_sep(train, custom_config={}):
 
     """Trains a Random Forest classifier for Gamma/Hadron separation.
     Returns the trained RF.
@@ -298,32 +225,34 @@ def train_sep(train, features, classification_args=random_forest_classifier_args
     -------
     `RandomForestClassifier`
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        classification_args = config['random_forest_classifier_args']
+
+    config = replace_config(standard_config, custom_config)
+    classification_args = config['random_forest_classifier_args']
+    features = config["classification_features"]
+    model = RandomForestClassifier
 
     print("Given features: ", features)
     print("Number of events for training: ", train.shape[0])
     print("Training Random Forest Classifier for",
     "Gamma/Hadron separation...")
 
-    clf = RandomForestClassifier(**classification_args)
+    clf = model(**classification_args)
 
     clf.fit(train[features],
-            train['hadroness'])
+            train['mc_type'])
     print("Random Forest trained!")
     return clf
 
 
-def build_models(filegammas, fileprotons, features,
-                save_models=True, path_models="./",
-                energy_min=-1, intensity_min=np.log10(60), leakage_cut=0.2,
-                r_min=0.15,
-                regression_args=random_forest_regressor_args,
-                classification_args=random_forest_classifier_args,
-                config_file=None):
+def build_models(filegammas, fileprotons,
+                 save_models=True, path_models="./",
+                 energy_min=-1,
+                 custom_config={},
+                 test_size=0.2,
+                 ):
     """Uses MC data to train Random Forests for Energy and disp_norm
     reconstruction and G/H separation. Returns 3 trained RF.
+    The config in config_file superseeds the one passed in argument.
 
     Parameters:
     -----------
@@ -333,16 +262,13 @@ def build_models(filegammas, fileprotons, features,
     fileprotons: string
     Name of the file with MC proton events
 
-    features: list of strings
-    Features for training the RF
-
     energy_min: float
     Cut in energy for gamma/hadron separation
 
     intensity_min: float
     Cut in intensity of the showers for training RF. Default is 60 phe
 
-    r_max: float
+    r_min: float
     Cut in distance from c.o.g of hillas ellipse to camera center, to avoid images truncated
     in the border. Default is 80% of camera radius.
 
@@ -365,67 +291,49 @@ def build_models(filegammas, fileprotons, features,
     regressor_disp: `RandomForestRegressor`
     classifier_gh: `RandomForestClassifier`
     """
-    if config_file is not None:
-        config = read_configuration_file(config_file)
-        regression_args = config['random_forest_regressor_args']
-        classification_args = config['random_forest_classifier_args']
 
-    df_gamma = pd.read_hdf(filegammas, key='events/LSTCam')
-    df_proton = pd.read_hdf(fileprotons, key='events/LSTCam')
+    config = replace_config(standard_config, custom_config)
+    events_filters = config["events_filters"]
+    regression_features = config["regression_features"]
 
-    df_gamma = filter_events(df_gamma,
-                             leakage_cut=leakage_cut,
-                             intensity_min=intensity_min,
-                             r_min=r_min)
-    df_proton = filter_events(df_proton,
-                              leakage_cut=leakage_cut,
-                              intensity_min=intensity_min,
-                              r_min=r_min)
+    df_gamma = pd.read_hdf(filegammas, key=dl1_params_lstcam_key)
+    df_proton = pd.read_hdf(fileprotons, key=dl1_params_lstcam_key)
+
+    df_gamma = utils.filter_events(df_gamma, filters=events_filters)
+    df_proton = utils.filter_events(df_proton, filters=events_filters)
 
     #Train regressors for energy and disp_norm reconstruction, only with gammas
 
-    reg_energy = train_energy(df_gamma, features,
-                            regression_args=regression_args
-                          )
-    reg_disp_vector = train_disp_vector(df_gamma, features,
-                            regression_args=regression_args
-                          )
+    reg_energy = train_energy(df_gamma, custom_config=config)
+
+    reg_disp_vector = train_disp_vector(df_gamma, custom_config=config)
 
     #Train classifier for gamma/hadron separation.
 
-    train, testg = train_test_split(df_gamma, test_size=0.2)
+    train, testg = train_test_split(df_gamma, test_size=test_size)
     test = testg.append(df_proton, ignore_index=True)
 
-    temp_reg_energy = train_energy(train, features,
-                            regression_args=regression_args
-                          )
-    temp_reg_disp_vector = train_disp_vector(train, features,
-                            regression_args=regression_args
-                          )
+    temp_reg_energy = train_energy(train, custom_config=config)
+
+    temp_reg_disp_vector = train_disp_vector(train, custom_config=config)
 
     #Apply the regressors to the test set
 
-    test['e_rec'] = temp_reg_energy.predict(test[features])
-    disp_vector = temp_reg_disp_vector.predict(test[features])
-    test['disp_dx_rec'] = disp_vector[:,0]
-    test['disp_dy_rec'] = disp_vector[:,1]
+    test['log_reco_energy'] = temp_reg_energy.predict(test[regression_features])
+    disp_vector = temp_reg_disp_vector.predict(test[regression_features])
+    test['reco_disp_dx'] = disp_vector[:, 0]
+    test['reco_disp_dy'] = disp_vector[:, 1]
 
     #Apply cut in reconstructed energy. New train set is the previous
     #test with energy and disp_norm reconstructed.
 
-    train = test[test['e_rec'] > energy_min]
+    train = test[test['log_reco_energy'] > energy_min]
 
     del temp_reg_energy, temp_reg_disp_vector
 
-    #Add e_rec and disp_rec to features.
-    features_sep = features.copy()
-    features_sep.append('e_rec')
-    features_sep.append('disp_dx_rec')
-    features_sep.append('disp_dy_rec')
-
     #Train the Classifier
 
-    cls_gh = train_sep(train, features_sep, classification_args=classification_args)
+    cls_gh = train_sep(train, custom_config=config)
 
     if save_models:
         os.makedirs(path_models, exist_ok=True)
@@ -439,7 +347,7 @@ def build_models(filegammas, fileprotons, features,
     return reg_energy, reg_disp_vector, cls_gh
 
 
-def apply_models(dl1, features, classifier, reg_energy, reg_disp_vector):
+def apply_models(dl1, classifier, reg_energy, reg_disp_vector, custom_config={}):
     """Apply previously trained Random Forests to a set of data
     depending on a set of features.
 
@@ -460,45 +368,40 @@ def apply_models(dl1, features, classifier, reg_energy, reg_disp_vector):
 
     """
 
-    features_ = list(features)
+    config = replace_config(standard_config, custom_config)
+    regression_features = config["regression_features"]
+    classification_features = config["classification_features"]
+
     dl2 = dl1.copy()
     #Reconstruction of Energy and disp_norm distance
-    dl2['e_rec'] = reg_energy.predict(dl2[features_])
-    disp_vector = reg_disp_vector.predict(dl2[features_])
-    dl2['disp_dx_rec'] = disp_vector[:,0]
-    dl2['disp_dy_rec'] = disp_vector[:,1]
+    dl2['log_reco_energy'] = reg_energy.predict(dl2[regression_features])
+    dl2['reco_energy'] = 10**(dl2['log_reco_energy']-3)
+    disp_vector = reg_disp_vector.predict(dl2[regression_features])
+    dl2['reco_disp_dx'] = disp_vector[:, 0]
+    dl2['reco_disp_dy'] = disp_vector[:, 1]
 
     #Construction of Source position in camera coordinates from disp_norm distance.
-    #WARNING: For not it only works fine for POINT SOURCE events
 
+    dl2['reco_src_x'], dl2['reco_src_y'] = disp.disp_to_pos(dl2.reco_disp_dx,
+                                                             dl2.reco_disp_dy,
+                                                             dl2.x,
+                                                             dl2.y,
+                                                             )
 
-    dl2['src_x_rec'], dl2['src_y_rec'] = utils.disp_to_pos(dl2.disp_dx_rec,
-                                                           dl2.disp_dy_rec,
-                                                           dl2.x,
-                                                           dl2.y,
-                                                           )
+    focal_length = 28 * u.m
+    src_pos_reco = utils.reco_source_position_sky(dl2.x.values * u.m,
+                                                  dl2.y.values * u.m,
+                                                  dl2.reco_disp_dx.values * u.m,
+                                                  dl2.reco_disp_dy.values * u.m,
+                                                  focal_length,
+                                                  dl2.mc_alt_tel.values * u.rad,
+                                                  dl2.mc_az_tel.values * u.rad)
 
-    features_.append('e_rec')
-    features_.append('disp_dx_rec')
-    features_.append('disp_dy_rec')
-    dl2['hadro_rec'] = classifier.predict(dl2[features_]).astype(int)
-    probs = classifier.predict_proba(dl2[features_])[0:,0]
+    dl2['reco_alt'] = src_pos_reco.alt.rad
+    dl2['reco_az'] = src_pos_reco.az.rad
+
+    dl2['reco_type'] = classifier.predict(dl2[classification_features]).astype(int)
+    probs = classifier.predict_proba(dl2[classification_features])[0:, 0]
     dl2['gammaness'] = probs
     return dl2
 
-
-def filter_events(data, leakage_cut = 1.0, intensity_min = 10, r_min = 0.15):
-    """
-    Filter events based on extracted features.
-
-    Parameters
-    ----------
-    data: `pandas.DataFrame`
-
-    Returns
-    -------
-    `pandas.DataFrame`
-    """
-
-    filter = (data['leakage'] < leakage_cut) & (data['intensity'] > intensity_min) & (data['r'] > r_min)
-    return data[filter]

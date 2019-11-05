@@ -12,8 +12,11 @@ from ctapipe.image.cleaning import number_of_islands
 from ..reco import utils
 from numpy import nan
 
-all = [
+__all__ = [
     'DL1ParametersContainer',
+    'DispContainer',
+    'MetaData',
+    'ThrownEventsHistogram'
 ]
 
 class DL1ParametersContainer(Container):
@@ -22,6 +25,7 @@ class DL1ParametersContainer(Container):
         For now I have not found an elegant way to do so
     """
     intensity = Field(None, 'total intensity (size)')
+    log_intensity = Field(None, 'log of total intensity (size)')
 
     x = Field(None, 'centroid x coordinate', unit=u.m)
     y = Field(None, 'centroid x coordinate', unit=u.m)
@@ -38,7 +42,6 @@ class DL1ParametersContainer(Container):
     disp_angle = Field(None, 'disp_angle [rad]', unit=u.rad)
     disp_sign = Field(None, 'disp_sign')
     disp_miss = Field(None, 'disp_miss [m]', unit=u.m)
-    hadroness = Field(None, 'hadroness')
     src_x = Field(None, 'source x coordinate in camera frame', unit=u.m)
     src_y = Field(None, 'source y coordinate in camera frame', unit=u.m)
     time_gradient = Field(None, 'Time gradient in the camera')
@@ -51,6 +54,7 @@ class DL1ParametersContainer(Container):
     gps_time = Field(None, 'GPS time event trigger')
 
     mc_energy = Field(None, 'Simulated Energy', unit=u.TeV)
+    log_mc_energy = Field(None, 'log of simulated energy/GeV')
     mc_alt = Field(None, 'Simulated altitude', unit=u.rad)
     mc_az = Field(None, 'Simulated azimuth', unit=u.rad)
     mc_core_x = Field(None, 'Simulated impact point x position', unit=u.m)
@@ -133,10 +137,14 @@ class DL1ParametersContainer(Container):
         self.disp_miss = disp.miss
 
     def set_timing_features(self, geom, image, pulse_time, hillas):
-        peak_time = Quantity(pulse_time) * u.Unit("ns")
-        timepars = time.timing_parameters(geom, image, peak_time, hillas)
-        self.time_gradient = timepars.slope.value
-        self.intercept = timepars.intercept
+        try:    # if np.polyfit fails (e.g. len(image) < deg + 1)
+            timepars = time.timing_parameters(geom, image, pulse_time, hillas)
+            self.time_gradient = timepars.slope.value
+            self.intercept = timepars.intercept
+        except ValueError:
+            self.time_gradient = np.nan
+            self.intercept = np.nan
+
     def set_leakage(self, geom, image, clean):
         leakage_c = leakage(geom, image, clean)
         self.leakage = leakage_c.leakage2_intensity
@@ -153,15 +161,13 @@ class DL1ParametersContainer(Container):
         self.tel_pos_z = tel_pos[2] 
 
     def set_source_camera_position(self, event, telescope_id):
-        # sourcepos = utils.cal_cam_source_pos(mc_alt, mc_az,
-        #                                      mc_alt_tel, mc_az_tel,
-        #                                      focal_length)
-        # self.src_x = sourcepos[0]
-        # self.src_y = sourcepos[1]
         tel = event.inst.subarray.tel[telescope_id]
         source_pos = utils.get_event_pos_in_camera(event, tel)
         self.src_x = source_pos[0]
         self.src_y = source_pos[1]
+
+    def set_mc_type(self, event):
+        self.mc_type = event.mc.shower_primary_id
 
 
 class DispContainer(Container):
@@ -175,3 +181,46 @@ class DispContainer(Container):
     norm = Field(nan, 'Norm of the disp_norm vector')
     sign = Field(nan, 'Sign of the disp_norm')
     miss = Field(nan, 'miss parameter norm')
+
+
+class ExtraMCInfo(Container):
+    obs_id = Field(0, "MC Run Identifier")
+
+class ExtraImageInfo(Container):
+    """ attach the tel_id """
+    tel_id = Field(0, "Telescope ID")
+
+
+class ThrownEventsHistogram(Container):
+    """ 2D histogram from SimTel files """
+    obs_id = Field(-1, 'MC run ID')
+    hist_id = Field(-1, 'Histogram ID')
+    num_entries = Field(-1, 'Number of entries in the histogram')
+    bins_energy = Field(None, 'array of energy bin lower edges, as in np.histogram')
+    bins_core_dist = Field(None, 'array of core-distance bin lower edges, as in np.histogram')
+    histogram = Field(None, "array of histogram entries, size (n_bins_x, n_bins_y)")
+
+    def fill_from_simtel(self, hist):
+        """ fill from a SimTel Histogram entry"""
+        self.hist_id = hist['id']
+        self.num_entries = hist['entries']
+        xbins = np.linspace(hist['lower_x'], hist['upper_x'], hist['n_bins_x'] + 1)
+        ybins = np.linspace(hist['lower_y'], hist['upper_y'], hist['n_bins_y'] + 1)
+        self.bins_core_dist = xbins
+        self.bins_energy = 10 ** ybins
+        self.histogram = hist['data']
+        self.meta['hist_title'] = hist['title']
+        self.meta['x_label'] = 'Log10 E (TeV)'
+        self.meta['y_label'] = '3D Core Distance (m)'
+
+
+class MetaData(Container):
+    """
+    Some metadata
+    """
+    SOURCE_FILENAMES = Field([], "filename of the source file")
+    LSTCHAIN_VERSION = Field(None, "version of lstchain")
+    CTAPIPE_VERSION = Field(None, "version of ctapipe")
+    CONTACT = Field(None, "Person or institution responsible for this data product")
+
+

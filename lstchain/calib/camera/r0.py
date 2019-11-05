@@ -30,6 +30,10 @@ class CameraR0Calibrator(Component):
         Set to None if no Tool to pass.
     kwargs
     """
+    offset = Int(
+        300,
+        help='Define the offset of the baseline'
+    ).tag(config=True)
 
     r1_sample_start = Int(default_value=None, help='Start sample for r1 waveform', allow_none=True).tag(config=True)
 
@@ -76,11 +80,6 @@ class LSTR0Corrections(CameraR0Calibrator):
         help='Path to the LST pedestal binary file'
     ).tag(config=True)
 
-    offset = Int(
-        300,
-        help='Define the offset of the baseline'
-    ).tag(config=True)
-
     tel_id = Int(
         0,
         help='id of the telescope to calibrate'
@@ -124,30 +123,32 @@ class LSTR0Corrections(CameraR0Calibrator):
 
     def calibrate(self, event):
         for tel_id in event.r0.tels_with_data:
-            self.subtract_pedestal(event)
-            self.time_lapse_corr(event)
-            self.interpolate_spikes(event)
+            self.subtract_pedestal(event, tel_id)
+            self.time_lapse_corr(event, tel_id)
+            self.interpolate_spikes(event, tel_id)
 
-            event.r1.tel[self.tel_id].trigger_type = event.r0.tel[self.tel_id].trigger_type
-            event.r1.tel[self.tel_id].trigger_time = event.r1.tel[self.tel_id].trigger_time
+            event.r1.tel[tel_id].trigger_type = event.r0.tel[tel_id].trigger_type
+            event.r1.tel[tel_id].trigger_time = event.r0.tel[tel_id].trigger_time
+
             samples = event.r1.tel[tel_id].waveform[:, :, self.r1_sample_start:self.r1_sample_end]
-            event.r1.tel[tel_id].waveform = samples.astype('float32')
+            event.r1.tel[tel_id].waveform = samples.astype('int16') - self.offset
 
-    def subtract_pedestal(self, event):
+    def subtract_pedestal(self, event, tel_id):
         """
         Subtract cell offset using pedestal file.
         Fill the R1 container.
         Parameters
         ----------
         event : `ctapipe` event-container
+        tel_id : id of the telescope
         """
-        n_modules = event.lst.tel[self.tel_id].svc.num_modules
+        n_modules = event.lst.tel[tel_id].svc.num_modules
 
         for nr_module in range(0, n_modules):
-            self.first_cap_array[nr_module, :, :] = self._get_first_capacitor(event, nr_module)
+            self.first_cap_array[nr_module, :, :] = self._get_first_capacitor(event, nr_module, tel_id)
 
-        expected_pixel_id = event.lst.tel[self.tel_id].svc.pixel_ids
-        samples = np.copy(event.r0.tel[self.tel_id].waveform)
+        expected_pixel_id = event.lst.tel[tel_id].svc.pixel_ids
+        samples = np.copy(event.r0.tel[tel_id].waveform)
         samples.astype('int16')
         samples = subtract_pedestal_jit(
             samples,
@@ -155,12 +156,11 @@ class LSTR0Corrections(CameraR0Calibrator):
             self.first_cap_array,
             self.pedestal_value_array,
             n_modules)
-        event.r1.tel[self.tel_id].trigger_type = event.r0.tel[self.tel_id].trigger_type
-        event.r1.tel[self.tel_id].trigger_time = event.r1.tel[self.tel_id].trigger_time
-        event.r1.tel[self.tel_id].waveform = samples[:, :, :]
+        event.r1.tel[tel_id].trigger_type = event.r0.tel[tel_id].trigger_type
+        event.r1.tel[tel_id].trigger_time = event.r0.tel[tel_id].trigger_time
+        event.r1.tel[tel_id].waveform = samples
 
-
-    def time_lapse_corr(self, event):
+    def time_lapse_corr(self, event, tel_id):
         """
         Perform time lapse baseline corrections.
         Fill the R1 container or
@@ -168,53 +168,56 @@ class LSTR0Corrections(CameraR0Calibrator):
         Parameters
         ----------
         event : `ctapipe` event-container
+        tel_id : id of the telescope
         """
-        expected_pixel_id = event.lst.tel[self.tel_id].svc.pixel_ids
-        local_clock_list = event.lst.tel[self.tel_id].evt.local_clock_counter
-        n_modules = event.lst.tel[self.tel_id].svc.num_modules
+        expected_pixel_id = event.lst.tel[tel_id].svc.pixel_ids
+        local_clock_list = event.lst.tel[tel_id].evt.local_clock_counter
+        n_modules = event.lst.tel[tel_id].svc.num_modules
         for nr_module in range(0, n_modules):
-            self.first_cap_time_lapse_array[nr_module, :, :] = self._get_first_capacitor(event, nr_module)
+            self.first_cap_time_lapse_array[nr_module, :, :] = self._get_first_capacitor(event, nr_module, tel_id)
 
         #If R1 container exist modifies it
-        if isinstance(event.r1.tel[self.tel_id].waveform, np.ndarray):
-            samples = event.r1.tel[self.tel_id].waveform
+        if isinstance(event.r1.tel[tel_id].waveform, np.ndarray):
+            samples = event.r1.tel[tel_id].waveform
             do_time_lapse_corr(samples, expected_pixel_id, local_clock_list,
                                self.first_cap_time_lapse_array, self.last_reading_time_array, n_modules)
-            event.r1.tel[self.tel_id].trigger_type = event.r0.tel[self.tel_id].trigger_type
-            event.r1.tel[self.tel_id].trigger_time = event.r1.tel[self.tel_id].trigger_time
-            event.r1.tel[self.tel_id].waveform = samples[:, :, :]
+            event.r1.tel[tel_id].trigger_type = event.r0.tel[tel_id].trigger_type
+            event.r1.tel[tel_id].trigger_time = event.r0.tel[tel_id].trigger_time
+            event.r1.tel[tel_id].waveform = samples
         else: # Modifies R0 container. This is for create pedestal file.
-            samples = np.copy(event.r0.tel[self.tel_id].waveform)
+            samples = np.copy(event.r0.tel[tel_id].waveform)
             do_time_lapse_corr(samples, expected_pixel_id, local_clock_list,
                                self.first_cap_time_lapse_array, self.last_reading_time_array, n_modules)
-            event.r0.tel[self.tel_id].waveform = samples[:, :, :]
+            event.r0.tel[tel_id].waveform = samples
 
-    def interpolate_spikes(self, event):
+    def interpolate_spikes(self, event, tel_id):
         """
         Interpolates spike A & B.
         Fill the R1 container.
         Parameters
         ----------
         event : `ctapipe` event-container
+        tel_id : id of the telescope
         """
         self.first_cap_old_array[:, :, :] = self.first_cap_array_spike[:, :, :]
-        n_modules = event.lst.tel[self.tel_id].svc.num_modules
+        n_modules = event.lst.tel[tel_id].svc.num_modules
         for nr_module in range(0, n_modules):
-            self.first_cap_array_spike[nr_module, :, :] = self._get_first_capacitor(event, nr_module)
+            self.first_cap_array_spike[nr_module, :, :] = self._get_first_capacitor(event, nr_module, tel_id)
 
         # Interpolate spikes should be done after pedestal subtraction and time lapse correction.
-        if isinstance(event.r1.tel[self.tel_id].waveform, np.ndarray):
-            waveform = event.r1.tel[self.tel_id].waveform[:, :, :]
-            expected_pixel_id = event.lst.tel[self.tel_id].svc.pixel_ids
+        if isinstance(event.r1.tel[tel_id].waveform, np.ndarray):
+            waveform = event.r1.tel[tel_id].waveform[:, :, :]
+            expected_pixel_id = event.lst.tel[tel_id].svc.pixel_ids
             samples = waveform.copy()
             samples = samples.astype('int16')
-            event.r1.tel[self.tel_id].waveform = self.interpolate_pseudo_pulses(samples,
-                                                                                expected_pixel_id,
-                                                                                self.first_cap_array_spike,
-                                                                                self.first_cap_old_array,
-                                                                                n_modules)
-            event.r1.tel[self.tel_id].trigger_type =  event.r0.tel[self.tel_id].trigger_type
-            event.r1.tel[self.tel_id].trigger_time = event.r1.tel[self.tel_id].trigger_time
+
+            event.r1.tel[tel_id].waveform = self.interpolate_pseudo_pulses(samples,
+                                                                           expected_pixel_id,
+                                                                           self.first_cap_array_spike,
+                                                                           self.first_cap_old_array,
+                                                                           n_modules)
+            event.r1.tel[tel_id].trigger_type = event.r0.tel[tel_id].trigger_type
+            event.r1.tel[tel_id].trigger_time = event.r0.tel[tel_id].trigger_time
 
     @staticmethod
     @jit(parallel=True)
@@ -280,17 +283,18 @@ class LSTR0Corrections(CameraR0Calibrator):
                 self.pedestal_value_array[:, :, self.size4drs:self.size4drs + 40] \
                     = pedestal_data[:, :, 0:40] - self.offset
 
-    def _get_first_capacitor(self, event, nr_module):
+    def _get_first_capacitor(self, event, nr_module, tel_id):
         """
         Get first capacitor values from event for nr module.
         Parameters
         ----------
         event : `ctapipe` event-container
         nr_module : number of module
+        tel_id : id of the telescope
         """
         fc = np.zeros((2, 7))
-        first_cap = event.lst.tel[self.tel_id].evt.first_capacitor_id[nr_module * 8:
-                                                            (nr_module + 1) * 8]
+        first_cap = event.lst.tel[tel_id].evt.first_capacitor_id[nr_module * 8:
+                                                                 (nr_module + 1) * 8]
 
         # First capacitor order according Dragon v5 board data format
         for i, j in zip([0, 1, 2, 3, 4, 5, 6], [0, 0, 1, 1, 2, 2, 3]):
@@ -368,9 +372,9 @@ def ped_time(timediff):
     """
     Power law function for time lapse baseline correction.
     Coefficients from curve fitting to dragon test data
-    at temperature 40 degC
+    at temperature 30 degC
     """
-    return 23.03 * np.power(timediff, -0.25) - 9.73
+    return 27.33 * np.power(timediff, -0.24) - 10.4
 
 @jit
 def interpolate_spike_A(waveform, gain, position, pixel):
@@ -417,6 +421,8 @@ class NullR0Calibrator(CameraR0Calibrator):
                       "the R0 level, then r1 samples will equal r0 samples")
 
     def calibrate(self, event):
-        for telid in event.r0.tels_with_data:
-            samples = event.r0.tel[telid].waveform[:,:,self.r1_sample_start:self.r1_sample_end]
-            event.r1.tel[telid].waveform = samples.astype('float32')
+        for tel_id in event.r0.tels_with_data:
+            event.r1.tel[tel_id].trigger_type = event.r0.tel[tel_id].trigger_type
+            event.r1.tel[tel_id].trigger_time = event.r0.tel[tel_id].trigger_time
+            samples = event.r0.tel[tel_id].waveform[:, :, self.r1_sample_start:self.r1_sample_end]
+            event.r1.tel[tel_id].waveform = samples.astype('int16') - self.offset

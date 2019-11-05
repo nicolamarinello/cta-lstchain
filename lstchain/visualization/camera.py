@@ -1,7 +1,12 @@
 import numpy as np
-from ..reco.utils import disp_vector
+from ..reco.disp import disp_vector
 import astropy.units as u
 
+__all__ = [
+    'overlay_disp_vector',
+    'overlay_hillas_major_axis',
+    'overlay_source',
+]
 
 def overlay_source(display, source_pos_x, source_pos_y, **kwargs):
     """
@@ -42,8 +47,11 @@ def overlay_disp_vector(display, disp, hillas, **kwargs):
     display.axes.quiver(hillas.x, hillas.y,
                         disp.dx, disp.dy,
                         units='xy', scale=1*u.m,
+                        angles='xy',
                         **kwargs,
                         )
+
+    display.axes.quiver(hillas.x.value, hillas.y.value, disp.dx.value, disp.dy.value, units='xy', scale=1)
 
 
 def overlay_hillas_major_axis(display, hillas, **kwargs):

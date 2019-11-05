@@ -11,6 +11,19 @@ from matplotlib import gridspec
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_curve
 
+
+__all__ = [
+    'plot_features',
+    'plot_e',
+    'plot_disp',
+    'plot_disp_vector',
+    'plot_pos',
+    'plot_ROC',
+    'plot_importances',
+    'plot_e_resolution',
+    'calc_resolution'
+]
+
 def plot_features(data, true_hadroness=False):
     """Plot the distribution of different features that characterize
     events, such as hillas parameters or MC data.
@@ -23,16 +36,16 @@ true_hadroness:
     True: True gammas and proton events are plotted (they are separated using true hadroness).
     False: Gammas and protons are separated using reconstructed hadroness (hadro_rec)
     """
-    hadro = "hadro_rec"
+    hadro = "reco_type"
     if true_hadroness:
-        hadro = "hadroness"
+        hadro = "mc_type"
 
     #Energy distribution
     plt.subplot(331)
-    plt.hist(data[data[hadro]<1]['mc_energy'],
+    plt.hist(data[data[hadro]<1]['log_mc_energy'],
             histtype=u'step',bins=100,
              label="Gammas")
-    plt.hist(data[data[hadro]>0]['mc_energy'],
+    plt.hist(data[data[hadro]>0]['log_mc_energy'],
              histtype=u'step',bins=100,
              label="Protons")
     plt.ylabel(r'# of events',fontsize=15)
@@ -52,16 +65,16 @@ true_hadroness:
 
     #Intensity distribution
     plt.subplot(333)
-    plt.hist(data[data[hadro] < 1]['intensity'],
+    plt.hist(data[data[hadro] < 1]['log_intensity'],
              histtype=u'step', bins=100,
              label="Gammas")
-    plt.hist(data[data[hadro] > 0]['intensity'],
+    plt.hist(data[data[hadro] > 0]['log_intensity'],
              histtype=u'step', bins=100,
              label="Protons")
     plt.ylabel(r'# of events', fontsize=15)
     plt.xlabel(r"$log_{10}Intensity$")
 
-    dataforwl = data[data['intensity'] > np.log10(200)]
+    dataforwl = data[data['log_intensity'] > np.log10(200)]
     #Width distribution
     plt.subplot(334)
     plt.hist(dataforwl[dataforwl[hadro] < 1]['width'],
@@ -146,17 +159,17 @@ def plot_e(data, n_bins, emin, emax, true_hadroness=False):
     False: Gammas and protons are separated using reconstructed hadroness (hadro_rec)
 
     """
-    hadro = "hadro_rec"
+    hadro = "reco_type"
     if true_hadroness:
-        hadro = "hadroness"
+        hadro = "mc_type"
 
     gammas = data[data[hadro]==0]
 
     plt.subplot(221)
 
-    delta_e = np.log(10**data['e_rec']/10**data['mc_energy'])
+    delta_e = np.log(10**data['log_reco_energy']/10**data['log_mc_energy'])
     means_result = scipy.stats.binned_statistic(
-        data['mc_energy'],[delta_e,delta_e**2],
+        data['log_mc_energy'],[delta_e,delta_e**2],
         bins=n_bins,range=(emin, emax),statistic='mean')
     means, means2 = means_result.statistic
     standard_deviations = np.sqrt(means2 - means**2)
@@ -169,8 +182,8 @@ def plot_e(data, n_bins, emin, emax, true_hadroness=False):
     plt.ylabel('Bias',fontsize=24)
 
     plt.subplot(222)
-    hE = plt.hist2d(gammas['mc_energy'],
-                gammas['e_rec'],
+    hE = plt.hist2d(gammas['log_mc_energy'],
+                gammas['reco_energy'],
                     bins=100)
 
     plt.colorbar(hE[3])
@@ -178,7 +191,7 @@ def plot_e(data, n_bins, emin, emax, true_hadroness=False):
                fontsize=15)
     plt.ylabel('$log_{10}E_{rec}$',
                fontsize=15)
-    plt.plot(gammas['mc_energy'],gammas['mc_energy'],
+    plt.plot(gammas['log_mc_energy'],gammas['log_mc_energy'],
              "-",color='red')
 
     #Plot a profile
@@ -192,8 +205,8 @@ def plot_e(data, n_bins, emin, emax, true_hadroness=False):
 
     plt.subplots_adjust(hspace=.0)
 
-def plot_disp(data,true_hadroness=False):
 
+def plot_disp(data, true_hadroness=False):
     """Plot the performance of reconstructed position
 
     Parameters:
@@ -206,59 +219,68 @@ def plot_disp(data,true_hadroness=False):
     False: Gammas and protons are separated using reconstructed
     hadroness (hadro_rec)
     """
-    hadro = "hadro_rec"
+    hadro = "reco_type"
     if true_hadroness:
-        hadro = "hadroness"
+        hadro = "mc_type"
 
-    gammas = data[data[hadro]==0]
+    gammas = data[data[hadro] == 0]
 
     plt.subplot(221)
-    difD = ((gammas['disp_norm']-gammas['disp_rec'])/gammas['disp_norm'])
-    section = difD[abs(difD) < 0.5]
+
+    reco_disp_norm = np.sqrt(gammas['reco_disp_dx']**2 + gammas['reco_disp_dy']**2)
+    disp_res = ((gammas['disp_norm'] - reco_disp_norm) / gammas['disp_norm'])
+
+    section = disp_res[abs(disp_res) < 0.5]
     mu,sigma = norm.fit(section)
-    print(mu,sigma)
-    n,bins,patches = plt.hist(difD,100,density=1,
-                              alpha=0.75,range=[-2,1.5])
+    print("mu = {}\n sigma = {}".format(mu, sigma))
+
+    n, bins, patches = plt.hist(disp_res,
+                                bins=100,
+                                density=1,
+                                alpha=0.75,
+                                range=[-2, 1.5],
+                                )
+
     y = norm.pdf( bins, mu, sigma)
-    l = plt.plot(bins, y, 'r--', linewidth=2)
-    plt.xlabel('$\\frac{disp\_norm_{gammas}-disp_{rec}}{disp\_norm_{gammas}}$',
-    fontsize=15)
-    plt.figtext(0.15,0.7,'Mean: '+str(round(mu,4)),
-                fontsize=12)
-    plt.figtext(0.15,0.65,'Std: '+str(round(sigma,4)),
-                fontsize=12)
+
+    plt.plot(bins, y, 'r--', linewidth=2)
+
+    plt.xlabel('$\\frac{disp\_norm_{gammas}-disp_{rec}}{disp\_norm_{gammas}}$', fontsize=15)
+
+    plt.figtext(0.15, 0.7, 'Mean: ' + str(round(mu, 4)), fontsize=12)
+    plt.figtext(0.15, 0.65, 'Std: ' + str(round(sigma, 4)), fontsize=12)
 
     plt.subplot(222)
-    hD = plt.hist2d(gammas['disp_norm'],gammas['disp_rec'],
+
+    hD = plt.hist2d(gammas['disp_norm'], reco_disp_norm,
                     bins=100,
-                    range=([0,1.1],[0,1.1]),
+                    range=([0, 1.1], [0, 1.1]),
                 )
+
     plt.colorbar(hD[3])
-    plt.xlabel('$disp\_norm_{gammas}$',
-            fontsize=15)
-    plt.ylabel('$disp\_norm_{rec}$',
-               fontsize=15)
+    plt.xlabel('$disp\_norm_{gammas}$', fontsize=15)
+
+    plt.ylabel('$disp\_norm_{rec}$', fontsize=15)
+
     plt.plot(gammas['disp_norm'], gammas['disp_norm'], "-", color='red')
 
     plt.subplot(223)
-    theta2 = (gammas['src_x']-gammas['src_x_rec'])**2
-    +(gammas['src_y']-gammas['src_y'])**2
-    plt.hist(theta2,bins=100,
-            range=[0,0.1],histtype=u'step')
-    plt.xlabel(r'$\theta^{2}(º)$',
-               fontsize=15)
-    plt.ylabel(r'# of events',
-               fontsize=15)
+    theta2 = (gammas['src_x']-gammas['reco_src_x'])**2 + (gammas['src_y']-gammas['src_y'])**2
+
+    plt.hist(theta2, bins=100, range=[0, 0.1], histtype=u'step')
+    plt.xlabel(r'$\theta^{2}(º)$', fontsize=15)
+    plt.ylabel(r'# of events', fontsize=15)
+
 
 def plot_disp_vector(data):
     fig, axes = plt.subplots(1, 2)
 
-    axes[0].hist2d(data.disp_dx, data.disp_dx_rec, bins=60);
+    axes[0].hist2d(data.disp_dx, data.reco_disp_dx, bins=60);
     axes[0].set_xlabel('mc_disp')
     axes[0].set_ylabel('reco_disp')
     axes[0].set_title('disp_dx')
 
-    axes[1].hist2d(data.disp_dy, data.disp_dy_rec, bins=60);
+    axes[1].hist2d(data.disp_dy, data.reco_disp_dy, bins=60);
     axes[1].set_xlabel('mc_disp')
     axes[1].set_ylabel('reco_disp')
     axes[1].set_title('disp_dy');
@@ -277,51 +299,58 @@ def plot_pos(data,true_hadroness=False):
     False: Gammas and protons are separated using reconstructed
     hadroness (hadro_rec)
     """
-    hadro = "hadro_rec"
+    hadro = "reco_type"
     if true_hadroness:
-        hadro = "hadroness"
+        hadro = "mc_type"
 
     #True position
 
+
     trueX = data[data[hadro]==0]['src_x']
     trueY = data[data[hadro]==0]['src_y']
-    trueXprot = data[data[hadro]==1]['src_x']
-    trueYprot = data[data[hadro]==1]['src_y']
+    trueXprot = data[data[hadro]==101]['src_x']
+    trueYprot = data[data[hadro]==101]['src_y']
 
     #Reconstructed position
 
-    recX = data[data[hadro]==0]['src_x_rec']
-    recY = data[data[hadro]==0]['src_y_rec']
-    recXprot = data[data[hadro]==1]['src_x_rec']
-    recYprot = data[data[hadro]==1]['src_y_rec']
+    recX = data[data[hadro]==0]['reco_src_x']
+    recY = data[data[hadro]==0]['reco_src_y']
+    recXprot = data[data[hadro]==101]['reco_src_x']
+    recYprot = data[data[hadro]==101]['reco_src_y']
+    ran = np.array([(-0.3, 0.3), (-0.4, 0.4)])
+    nbins=50
 
     plt.subplot(221)
-    plt.hist2d(trueXprot,trueYprot,
-               bins=100,label="Protons")
+    plt.hist2d(trueXprot, trueYprot,
+               bins=nbins,label="Protons",
+               range=ran)
     plt.colorbar()
     plt.title("True position Protons")
     plt.xlabel("x(m)")
     plt.ylabel("y (m)")
+
     plt.subplot(222)
     plt.hist2d(trueX,trueY,
-               bins=100,label="Gammas",
-               range=np.array([(-1, 1), (-1, 1)]))
+               bins=nbins,label="Gammas",
+               range=ran)
     plt.colorbar()
     plt.title("True position Gammas")
     plt.xlabel("x (m)")
     plt.ylabel("y (m)")
+
     plt.subplot(223)
     plt.hist2d(recXprot,recYprot,
-               bins=100,label="Protons",
-               range=np.array([(-1, 1), (-1, 1)]))
+               bins=nbins,label="Protons",
+               range=ran)
     plt.colorbar()
     plt.title("Reconstructed position Protons")
     plt.xlabel("x (m)")
     plt.ylabel("y (m)")
+
     plt.subplot(224)
     plt.hist2d(recX,recY,
-               bins=100,label="Gammas",
-               range=np.array([(-1, 1), (-1, 1)]))
+               bins=nbins,label="Gammas",
+               range=ran)
     plt.colorbar()
     plt.title("Reconstructed position Gammas ")
     plt.xlabel("x (m)")
@@ -357,12 +386,12 @@ def plot_importances(clf,features):
 
 def plot_ROC(clf,data,features, Energy_cut):
     # Plot ROC curve:
-    check = clf.predict_proba(data[features])[0:,1]
-    accuracy = accuracy_score(data['hadroness'],
-                              data['hadro_rec'])
+    check = clf.predict_proba(data[features])[:, 0]
+    accuracy = accuracy_score(data['mc_type'],
+                              data['reco_type'])
     print(accuracy)
 
-    fpr_rf, tpr_rf, _ = roc_curve(data['hadroness'],
+    fpr_rf, tpr_rf, _ = roc_curve(1-data['gammaness'],
                                   check)
 
     plt.plot(fpr_rf, tpr_rf,
@@ -376,10 +405,10 @@ def plot_ROC(clf,data,features, Energy_cut):
 def plot_e_resolution(data, n_bins, emin, emax):
 
 
-    #delta_e = ((data['mc_energy']-data['e_rec'])*np.log(10))
-    delta_e = np.log(10**data['e_rec']/10**data['mc_energy'])
+    #delta_e = ((data['log_mc_energy']-data['reco_energy'])*np.log(10))
+    delta_e = np.log(10**data['reco_energy']/10**data['log_mc_energy'])
     means_result = scipy.stats.binned_statistic(
-        data['mc_energy'],[delta_e,delta_e**2],
+        data['log_mc_energy'],[delta_e,delta_e**2],
         bins=n_bins,range=(emin, emax),statistic='mean')
     means, means2 = means_result.statistic
     standard_deviations = np.sqrt(means2 - means**2)
@@ -422,13 +451,13 @@ def plot_e_resolution(data, n_bins, emin, emax):
         ax = plt.subplot(gs2[nbin])
         plt.hist(delta_e[means_result.binnumber==nbin+1], 50,
                  label='$logE_{center}$ '+'%.2f' % bin_centers[nbin])
-    plt.legend()
+        plt.legend()
     plt.subplots_adjust(hspace=.25)
     plt.subplots_adjust(wspace=.5)
 
 def calc_resolution(data):
 
-    delta_e = np.log(10**data['e_rec']/10**data['mc_energy'])
+    delta_e = np.log(10**data['reco_energy']/10**data['log_mc_energy'])
     n , bins, _ = plt.hist(delta_e,bins=500)
     mu,sigma = scipy.stats.norm.fit(delta_e)
     print(mu,sigma)
