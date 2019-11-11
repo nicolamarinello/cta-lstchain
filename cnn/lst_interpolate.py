@@ -16,56 +16,34 @@ from scipy.interpolate import griddata
 from tables.exceptions import HDF5ExtError, NoSuchNodeError
 
 '''
-usage: python lst_interpolate.py --dirs path/to/folder1 path/to/folder2 path/to/folder3 ... --rem_org 0 --rem_corr 0 --rem_nsnerr 0
+usage: python lst_interpolate.py --dirs path/to/folder1 path/to/folder2 ... --rem_org 0 --rem_corr 0 --rem_nsnerr 0
 '''
 
 
-def get_array_data(data):
-    data_ainfo = data.root.Array_Info
-
-    # array info data
-    ai_run_array_direction = [x['run_array_direction']
-                              for x in data_ainfo.iterrows()]
-    ai_tel_id = [x['tel_id'] for x in data_ainfo.iterrows()]
-    ai_tel_type = [x['tel_type'] for x in data_ainfo.iterrows()]
-    ai_tel_x = [x['tel_x'] for x in data_ainfo.iterrows()]
-    ai_tel_y = [x['tel_y'] for x in data_ainfo.iterrows()]
-    ai_tel_z = [x['tel_z'] for x in data_ainfo.iterrows()]
-
-    return data_ainfo, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z
-
-
 def get_event_data(data):
-    data_einfo = data.root.Event_Info
+    data_einfo = data.root.Events
 
     # event info data
     ei_alt = [x['alt'] for x in data_einfo.iterrows()]
     ei_az = [x['az'] for x in data_einfo.iterrows()]
-    ei_core_x = [x['core_x'] for x in data_einfo.iterrows()]
-    ei_core_y = [x['core_y'] for x in data_einfo.iterrows()]
-    ei_event_number = [x['event_number'] for x in data_einfo.iterrows()]
-    ei_h_first_int = [x['h_first_int'] for x in data_einfo.iterrows()]
     ei_mc_energy = [x['mc_energy'] for x in data_einfo.iterrows()]
-    ei_particle_id = [x['particle_id'] for x in data_einfo.iterrows()]
-    ei_run_number = [x['run_number'] for x in data_einfo.iterrows()]
-    ei_LST_indices = [x['LST_indices'] for x in data_einfo.iterrows()]
 
-    return data_einfo, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices
+    return data_einfo, ei_alt, ei_az, ei_mc_energy
 
 
 def get_LST_data(data):
-    data_LST = data.root.LST
+    data_LST = data.root.LST_LSTCam
 
     # LST data
     LST_event_index = [x['event_index'] for x in data_LST.iterrows()]
-    LST_image_charge = [x['image_charge'] for x in data_LST.iterrows()]
-    LST_image_peak_times = [x['image_peak_times'] for x in data_LST.iterrows()]
+    LST_image_charge = [x['charge'] for x in data_LST.iterrows()]
+    LST_image_peak_times = [x['peakpos'] for x in data_LST.iterrows()]
 
     return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
 def func(paths, format, ro, rc, rn):
-    img_rows, img_cols = 100, 100
+    # img_rows, img_cols = 100, 100
 
     # iterate on each proton file & concatenate charge arrays
     for f in paths:
@@ -73,12 +51,8 @@ def func(paths, format, ro, rc, rn):
         # get the data from the file
         try:
             data_p = tables.open_file(f)
-            _, LST_event_index, LST_image_charge, LST_image_peak_times = get_LST_data(
-                data_p)
-            _, ei_alt, ei_az, ei_core_x, ei_core_y, ei_event_number, ei_h_first_int, ei_mc_energy, ei_particle_id, ei_run_number, ei_LST_indices = get_event_data(
-                data_p)
-            _, ai_run_array_direction, ai_tel_id, ai_tel_type, ai_tel_x, ai_tel_y, ai_tel_z = get_array_data(
-                data_p)
+            _, LST_event_index, LST_image_charge, LST_image_peak_times = get_LST_data(data_p)
+            _, ei_alt, ei_az, ei_mc_energy = get_event_data(data_p)
 
             LST_event_index = LST_event_index[1:]
             LST_image_charge = LST_image_charge[1:]
@@ -91,16 +65,15 @@ def func(paths, format, ro, rc, rn):
 
             grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
 
-            # define the final array that will contain the interpolated images
-            # LST_image_charge_interp = np.zeros(
-            #    (len(LST_image_charge), img_rows, img_cols))
-
             # alt az of the array
-            az_array = ai_run_array_direction[0][0]
-            alt_array = ai_run_array_direction[0][1]
+            az_array = 0 # before was ai_run_array_direction[0][0], now it is hardcoded as it's not present in new files
+            alt_array = 1.2217305  # ai_run_array_direction[0][1]
 
+            '''
+            was probably useless and wrong even with the old simulations
             if alt_array > 90:
                 alt_array = 90
+            '''
 
             point = AltAz(alt=alt_array * u.rad, az=az_array * u.rad)
 
@@ -108,7 +81,9 @@ def func(paths, format, ro, rc, rn):
             lst_image_peak_times_interp = []
             delta_az = []
             delta_alt = []
-            acc_idxs = []  # accepted indexes
+            intensities = []
+            intensities_width_2 = []
+            acc_idxs = []  # accepted indexes    # in principle it can be removed when cuts (line AAA) are not used here
 
             cleaning_level = {'LSTCam': (3.5, 7.5, 2)}
 
@@ -131,104 +106,62 @@ def func(paths, format, ro, rc, rn):
                     intensity = hillas['intensity']
 
                     l = leakage(camera, image, clean)
-                    leakage1_intensity = l['leakage1_intensity']
+                    # print(l)
+                    leakage2_intensity = l['intensity_width_2']
 
-                    if intensity > 50 and leakage1_intensity < 0.2:
-                        # cubic interpolation
-                        interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
-                        interp_time = griddata(points, time, (grid_x, grid_y), fill_value=0, method='cubic')
+                    # if intensity > 50 and leakage2_intensity < 0.2:  # ------>AAA --- CUT DIRECTLY DURING INTERP
+                    # cubic interpolation
+                    interp_img = griddata(points, image, (grid_x, grid_y), fill_value=0, method='cubic')
+                    interp_time = griddata(points, time, (grid_x, grid_y), fill_value=0, method='cubic')
 
-                        # delta az, delta alt computation
-                        az = ei_az[LST_event_index[i]]
-                        alt = ei_alt[LST_event_index[i]]
-                        src = AltAz(alt=alt * u.rad, az=az * u.rad)
-                        source_direction = src.transform_to(NominalFrame(origin=point))
+                    # delta az, delta alt computation
+                    az = ei_az[LST_event_index[i]]
+                    alt = ei_alt[LST_event_index[i]]
+                    src = AltAz(alt=alt * u.rad, az=az * u.rad)
+                    source_direction = src.transform_to(NominalFrame(origin=point))
 
-                        # appending to arrays
-                        lst_image_charge_interp.append(interp_img)
-                        lst_image_peak_times_interp.append(interp_time)
-                        delta_az.append(source_direction.delta_az.deg)
-                        delta_alt.append(source_direction.delta_alt.deg)
+                    # appending to arrays
+                    lst_image_charge_interp.append(interp_img)
+                    lst_image_peak_times_interp.append(interp_time)
+                    delta_az.append(source_direction.delta_az.deg)
+                    delta_alt.append(source_direction.delta_alt.deg)
 
-                        acc_idxs += [i]
+                    intensities.append(intensity)
+                    intensities_width_2.append(leakage2_intensity)
+
+                    acc_idxs += [i]  # also this one can be removed when no cuts here
 
             lst_image_charge_interp = np.array(lst_image_charge_interp)
 
             data_p.close()
 
             if format == 'hdf5':
-
                 filename = f[:-3] + '_interp.h5'
 
                 print("Writing file: " + filename)
 
                 data_file = h5py.File(filename, 'w')
 
-                # data_file.create_dataset(
-                #    'Array_Info/ai_run_array_direction', data=np.array(ai_run_array_direction))
-                # data_file.create_dataset(
-                #    'Array_Info/ai_tel_id', data=np.array(ai_tel_id))
-                # data_file.create_dataset(
-                #    'Array_Info/ai_tel_type', data=np.array(ai_tel_type))
-                # data_file.create_dataset(
-                #    'Array_Info/ai_tel_x', data=np.array(ai_tel_x))
-                # data_file.create_dataset(
-                #    'Array_Info/ai_tel_y', data=np.array(ai_tel_y))
-                # data_file.create_dataset(
-                #    'Array_Info/ai_tel_z', data=np.array(ai_tel_z))
-
-                data_file.create_dataset(
-                    'Event_Info/ei_alt', data=np.array(ei_alt))
+                data_file.create_dataset('Event_Info/ei_alt', data=np.array(ei_alt))
                 data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_core_x', data=np.array(ei_core_x))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_core_y', data=np.array(ei_core_y))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_event_number', data=np.array(ei_event_number))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_h_first_int', data=np.array(ei_h_first_int))
-                data_file.create_dataset(
-                    'Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_particle_id', data=np.array(ei_particle_id))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_run_number', data=np.array(ei_run_number))
-                # data_file.create_dataset(
-                #    'Event_Info/ei_LST_indices', data=np.array(ei_LST_indices))
+                data_file.create_dataset('Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
 
-                data_file.create_dataset(
-                    'LST/LST_event_index', data=np.array(LST_event_index)[acc_idxs])
-                data_file.create_dataset(
-                    'LST/LST_image_charge', data=np.array(LST_image_charge)[acc_idxs])
-                data_file.create_dataset(
-                    'LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
-                data_file.create_dataset(
-                    'LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
-                data_file.create_dataset(
-                    'LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
-                data_file.create_dataset(
-                    'LST/delta_alt', data=np.array(delta_alt))
-                data_file.create_dataset(
-                    'LST/delta_az', data=np.array(delta_az))
+                data_file.create_dataset('LST/LST_event_index', data=np.array(LST_event_index)[acc_idxs])
+                data_file.create_dataset('LST/LST_image_charge', data=np.array(LST_image_charge)[acc_idxs])
+                data_file.create_dataset('LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
+                data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
+                data_file.create_dataset('LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
+                data_file.create_dataset('LST/delta_alt', data=np.array(delta_alt))
+                data_file.create_dataset('LST/delta_az', data=np.array(delta_az))
+
+                data_file.create_dataset('LST/intensities', data=np.array(intensities))
+                data_file.create_dataset('LST/intensities_width_2', data=np.array(intensities_width_2))
+
                 data_file.close()
 
                 # in the interpolated files there will be all the original events
                 # but for the LST only the ones actually see at least from one LST (as in the original files)
                 # and that are above thresholds cuts
-
-            elif format == 'npz':
-
-                filename = f[:-3] + '_interp.npz'
-
-                print("Writing file: " + filename)
-
-                np.savez(filename, ei_az=np.array(ei_az), ei_mc_energy=np.array(ei_mc_energy),
-                         LST_event_index=np.array(LST_event_index)[acc_idxs],
-                         LST_image_charge=np.array(LST_image_charge)[acc_idxs],
-                         LST_image_peak_times=np.array(LST_image_peak_times)[acc_idxs],
-                         LST_image_charge_interp=np.array(lst_image_charge_interp),
-                         LST_image_peak_times_interp=np.array(lst_image_peak_times_interp))
 
             if ro == '1':
                 remove(f)
@@ -269,8 +202,6 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files.', required=True)
-    parser.add_argument(
-        '--format', type=str, default='hdf5', help='Choose format.', required=False)
     parser.add_argument(
         '--rem_org', type=str, default='0', help='Select 1 to remove the original files.', required=False)
     parser.add_argument(

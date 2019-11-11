@@ -80,8 +80,7 @@ if __name__ == "__main__":
         alt_reco = altaz_reco[:, 0].reshape(altaz_reco.shape[0], 1)
         az_reco = altaz_reco[:, 1].reshape(altaz_reco.shape[0], 1)
 
-        batch = np.concatenate(
-            (y, y_prd, intensity, energy, e_reco, alt, az, alt_reco, az_reco), axis=1)
+        batch = np.concatenate((y, y_prd, intensity, energy, e_reco, alt, az, alt_reco, az_reco), axis=1)
         table = np.concatenate((table, batch), axis=0)
 
         steps_done += 1

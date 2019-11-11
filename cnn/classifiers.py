@@ -10,7 +10,7 @@ from keras.models import Sequential
 from keras.regularizers import l2
 
 import densenetlst
-import resnext
+# import resnext
 import sedensenetlst
 
 

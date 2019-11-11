@@ -1,11 +1,7 @@
 import argparse
 import random
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-# from ctapipe.instrument import CameraGeometry
-# from ctapipe.visualization import CameraDisplay
 from keras.models import load_model
 
 from generators import DataGeneratorC
@@ -28,70 +24,6 @@ def tester(folders, mdl, batch_size, atime, workers):
     test_idxs = test_generator.get_indexes()  # ground truth labels
     gt_labels = test_idxs[:, 2].reshape(test_idxs[:, 2].shape[0])
     pr_labels = pr_labels.reshape(pr_labels.shape[0])
-
-    """ NON HA SENSO PERCHé SI STA FACENDO CONFRONTI TENENDO FISSATA LA SOGLIA 0.5...BISOGNA GUARDARE IN TUTTO IL RANGE
-        DI SOGLIE, PER QUESTO SI USA LA ROC
-
-    # get wrong predicted images
-    diff = np.array(gt_labels) - np.around(pr_labels)
-    wrong = np.nonzero(diff)
-
-    test_idxs_wrong = test_idxs[wrong]
-
-    sample_length = 1000
-
-    if sample_length >= len(test_idxs_wrong):
-        sample_length = len(test_idxs_wrong) - 1
-
-    # choose randomly 1000 of them
-    rnd_idxs = np.random.randint(len(test_idxs_wrong), size=sample_length)
-    cento = test_idxs_wrong[rnd_idxs, :]
-    # cento = np.random.choice(test_idxs_wrong, sample_length)
-
-    
-    # create pdf report
-    nrow = sample_length
-    ncol = 2
-    geom = CameraGeometry.from_name("LSTCam")
-    fig, axs = plt.subplots(nrows=nrow, ncols=ncol, figsize=(5, 1))
-
-    for l, i in enumerate(cento):
-        image, time, gt, mc_energy = test_generator.get_event(i)
-
-        # image
-        disp = CameraDisplay(geom, ax=axs[l, 0], title='GT: ' + str(gt))
-        # disp.add_colorbar()
-        disp.image = image
-
-        # time
-        disp = CameraDisplay(geom, ax=axs[l, 1], title='Energy: ' + str(mc_energy))
-        # disp.add_colorbar()
-        disp.image = time
-
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-
-    fig.savefig(mdl + '_misc_report.pdf', format='pdf')
-    
-    
-
-    # histogram based on failed predictions
-    mis_en = np.array([])
-    for l, i in enumerate(cento):
-        image, time, gt, mc_energy = test_generator.get_event(i)
-        mis_en = np.append(mis_en, [mc_energy])
-
-    bins = 100
-
-    plt.figure(0)
-    plt.hist(mis_en, bins)
-    plt.xlabel('Energy [TeV]')
-    plt.ylabel('# of misclassified events [Log]')
-    plt.yscale('log', nonposy='clip')
-    plt.title('Misclassified events histogram - test set')
-
-    plt.savefig(mdl + '_misc_hist.eps', format='eps')
-    
-    """
 
     # saving predictions
     df = pd.DataFrame()

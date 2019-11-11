@@ -1,10 +1,8 @@
 import argparse
 import datetime
 import multiprocessing as mp
-import pickle
 import os
-import random
-import sys
+import pickle
 from os import listdir
 from os import mkdir
 from os.path import isfile, join
@@ -12,27 +10,22 @@ from os.path import isfile, join
 import keras
 import keras.backend as K
 import numpy as np
-from keras import optimizers
-from keras.callbacks import LearningRateScheduler
-from keras.callbacks import ModelCheckpoint, EarlyStopping
-
-
 from adabound import AdaBound
+from classifier_selector import select_classifier
 from classifier_test_plots import test_plots
 from classifier_tester import tester
 from classifier_training_plots import train_plots
-
-from clr import OneCycleLR
 from generators import DataGeneratorC
+from keras import optimizers
+from keras.callbacks import LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from losseshistory import LossHistoryC
+
 from utils import get_all_files
 
-from classifier_selector import select_classifier
 
-
-def classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
-                             test_dirs):
-
+def classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
+                             workers, test_dirs):
     # remove semaphore warnings
     os.environ["PYTHONWARNINGS"] = "ignore:semaphore_tracker:UserWarning"
 
@@ -41,8 +34,6 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
 
     # hard coded parameters
     shuffle = True
-    # if red:
-    #    shuffle = False
 
     img_rows, img_cols = 100, 100
     channels = 1
@@ -58,7 +49,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     decay = 1e-4  # decay
     momentum = 0.9  # momentum
     nesterov = True
-    
+
     # adam
     a_lr = 0.001
     a_beta_1 = 0.9
@@ -81,30 +72,17 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     cd_lrop = 5  # cool down
     mlr_lrop = a_lr / 100  # min lr
 
-    # clr
-    max_lr = 3.16e-4
-    e_per = 0.1
-    maximum_momentum = 0.99
-    minimum_momentum = 0.99
-
-    # intra class weights
-    # gdiff_w_path = './Paranal_gamma-diffuse_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
-    # protn_w_path = './Paranal_proton_North_20deg_3HB9_DL1_ML1_interp_intra-class_weights.npz'
-
-    # weights = None
-    # if we:
-    #    weights = [gdiff_w_path, protn_w_path]
+    # cuts
+    intensity_cut = 50
+    leakage2_intensity_cut = 0.2
 
     training_files = get_all_files(folders)
     validation_files = get_all_files(val_folders)
 
-    if clr and lropf:
-        print('Cannot use CLR and Reduce lr on plateau')
-        sys.exit(1)
-
     # generators
     print('Building training generator...')
-    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle)
+    training_generator = DataGeneratorC(training_files, batch_size=batch_size, arrival_time=time, shuffle=shuffle,
+                                        intensity=intensity_cut, leakage2_intensity=leakage2_intensity_cut)
 
     train_idxs = training_generator.get_indexes()
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
@@ -112,7 +90,8 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
 
     if val:
         print('Building validation generator...')
-        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False)
+        validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False,
+                                              intensity=intensity_cut, leakage2_intensity=leakage2_intensity_cut)
 
         valid_idxs = validation_generator.get_indexes()
         valid_gammas = np.unique(valid_idxs[:, 2], return_counts=True)[1][1]
@@ -131,8 +110,10 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     hype_print += '\n' + 'Batch size: ' + str(batch_size)
     hype_print += '\n' + 'Optimizer: ' + str(opt)
     hype_print += '\n' + 'Validation: ' + str(val)
-    hype_print += '\n' + 'Training set percentage: ' + str(red)
     hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
+
+    hype_print += '\n' + 'intensity_cut: ' + str(intensity_cut)
+    hype_print += '\n' + 'leakage2_intensity_cut: ' + str(leakage2_intensity_cut)
 
     if es:
         hype_print += '\n' + '--- Early stopping ---'
@@ -173,18 +154,6 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
         hype_print += '\n' + '----------------------------'
     if sd:
         hype_print += '\n' + '--- Step decay ---'
-    if clr:
-        hype_print += '\n' + '--- CLR ---'
-        hype_print += '\n' + 'max_lr: ' + str(max_lr)
-        hype_print += '\n' + 'End percentage: ' + str(e_per)
-        hype_print += '\n' + 'Max momentum:' + str(maximum_momentum)
-        hype_print += '\n' + 'Min momentum: ' + str(minimum_momentum)
-        hype_print += '\n' + '-----------'
-    # if we:
-    #    hype_print += '\n' + '--- Intra class weights ---'
-    #    hype_print += '\n' + 'Gamma-diffuse: ' + gdiff_w_path
-    #    hype_print += '\n' + 'Protons: ' + protn_w_path
-    #    hype_print += '\n' + '-----------'
 
     hype_print += '\n' + 'Workers: ' + str(workers)
     hype_print += '\n' + 'Shuffle: ' + str(shuffle)
@@ -287,20 +256,13 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
         early_stopping = EarlyStopping(monitor='val_acc', min_delta=md_es, patience=p_es, verbose=1, mode='max')
         callbacks.append(early_stopping)
 
-    # clr
-    if clr:
-        lr_manager_clr = OneCycleLR(len(training_generator) * batch_size, epochs, batch_size, max_lr,
-                                    end_percentage=e_per,
-                                    maximum_momentum=maximum_momentum, minimum_momentum=minimum_momentum)
-        callbacks.append(lr_manager_clr)
-
     model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
 
     if val:
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
-                            steps_per_epoch=len(training_generator) * red,
-                            validation_steps=len(validation_generator) * red,
+                            steps_per_epoch=len(training_generator),
+                            validation_steps=len(validation_generator),
                             epochs=epochs,
                             verbose=1,
                             max_queue_size=10,
@@ -310,7 +272,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
                             callbacks=callbacks)
     else:
         model.fit_generator(generator=training_generator,
-                            steps_per_epoch=len(training_generator) * red,
+                            steps_per_epoch=len(training_generator),
                             epochs=epochs,
                             verbose=1,
                             max_queue_size=10,
@@ -373,27 +335,21 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
-        '--time', type=bool, default='', help='Specify if feed the network with arrival time.', required=False)
+        '--time', type=bool, default=True, help='Specify if feed the network with arrival time.', required=False)
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
-        '--batch_size', type=int, default=10, help='Batch size.', required=True)
+        '--batch_size', type=int, default=64, help='Batch size.', required=True)
     parser.add_argument(
-        '--opt', type=str, default=False, help='Specify the optimizer.', required=False)
+        '--opt', type=str, default='adam', help='Specify the optimizer.', required=False)
     parser.add_argument(
-        '--val', type=bool, default=False, help='Specify if compute validation.', required=False)
+        '--val', type=bool, default=False, help='Specify whether compute validation.', required=False)
     parser.add_argument(
-        '--red', type=float, default=1, help='Specify if use reduced training set.', required=False)
-    parser.add_argument(
-        '--lrop', type=bool, default=False, help='Specify if use reduce lr on plateau.', required=False)
+        '--lrop', type=bool, default=False, help='Specify whether use reduce lr on plateau.', required=False)
     parser.add_argument(
         '--sd', type=bool, default=False, help='Step decay.', required=False)
     parser.add_argument(
-        '--clr', type=bool, default=False, help='Specify if use CLR.', required=False)
-    parser.add_argument(
-        '--es', type=bool, default=False, help='Specify if use early stopping.', required=False)
-    # parser.add_argument(
-    #    '--iweights', type=bool, default=False, help='Specify if use intra class weights.', required=False)
+        '--es', type=bool, default=False, help='Specify whether use early stopping.', required=False)
     parser.add_argument(
         '--workers', type=int, default='', help='Number of workers.', required=True)
     parser.add_argument(
@@ -410,14 +366,12 @@ if __name__ == "__main__":
     batch_size = FLAGS.batch_size
     opt = FLAGS.opt
     val = FLAGS.val
-    red = FLAGS.red
     lropf = FLAGS.lrop
     sd = FLAGS.sd
-    clr = FLAGS.clr
     es = FLAGS.es
     # we = FLAGS.iweights
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
-    classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, red, lropf, sd, clr, es, workers,
-                             test_dirs)
+    classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
+                             workers, test_dirs)
