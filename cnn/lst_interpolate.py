@@ -42,7 +42,7 @@ def get_LST_data(data):
     return data_LST, LST_event_index, LST_image_charge, LST_image_peak_times
 
 
-def func(paths, format, ro, rc, rn):
+def func(paths, ro, rc, rn):
     # img_rows, img_cols = 100, 100
 
     # iterate on each proton file & concatenate charge arrays
@@ -60,13 +60,12 @@ def func(paths, format, ro, rc, rn):
 
             # get camera geometry & camera pixels coordinates
             camera = CameraGeometry.from_name("LSTCam")
-            points = np.array([np.array(camera.pix_x / u.m),
-                               np.array(camera.pix_y / u.m)]).T
+            points = np.array([np.array(camera.pix_x / u.m), np.array(camera.pix_y / u.m)]).T
 
             grid_x, grid_y = np.mgrid[-1.25:1.25:100j, -1.25:1.25:100j]
 
             # alt az of the array
-            az_array = 0 # before was ai_run_array_direction[0][0], now it is hardcoded as it's not present in new files
+            az_array = 0  # before was ai_run_array_direction[0][0], now it is hardcoded as it's not present in new files
             alt_array = 1.2217305  # ai_run_array_direction[0][1]
 
             '''
@@ -131,37 +130,36 @@ def func(paths, format, ro, rc, rn):
 
                     acc_idxs += [i]  # also this one can be removed when no cuts here
 
-            lst_image_charge_interp = np.array(lst_image_charge_interp)
+            # lst_image_charge_interp = np.array(lst_image_charge_interp)
 
             data_p.close()
 
-            if format == 'hdf5':
-                filename = f[:-3] + '_interp.h5'
+            filename = f[:-3] + '_interp.h5'
 
-                print("Writing file: " + filename)
+            print("Writing file: " + filename)
 
-                data_file = h5py.File(filename, 'w')
+            data_file = h5py.File(filename, 'w')
 
-                data_file.create_dataset('Event_Info/ei_alt', data=np.array(ei_alt))
-                data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
-                data_file.create_dataset('Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
+            data_file.create_dataset('Event_Info/ei_alt', data=np.array(ei_alt))
+            data_file.create_dataset('Event_Info/ei_az', data=np.array(ei_az))
+            data_file.create_dataset('Event_Info/ei_mc_energy', data=np.array(ei_mc_energy))
 
-                data_file.create_dataset('LST/LST_event_index', data=np.array(LST_event_index)[acc_idxs])
-                data_file.create_dataset('LST/LST_image_charge', data=np.array(LST_image_charge)[acc_idxs])
-                data_file.create_dataset('LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
-                data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
-                data_file.create_dataset('LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
-                data_file.create_dataset('LST/delta_alt', data=np.array(delta_alt))
-                data_file.create_dataset('LST/delta_az', data=np.array(delta_az))
+            data_file.create_dataset('LST/LST_event_index', data=np.array(LST_event_index)[acc_idxs])
+            data_file.create_dataset('LST/LST_image_charge', data=np.array(LST_image_charge)[acc_idxs])
+            data_file.create_dataset('LST/LST_image_peak_times', data=np.array(LST_image_peak_times)[acc_idxs])
+            data_file.create_dataset('LST/LST_image_charge_interp', data=np.array(lst_image_charge_interp))
+            data_file.create_dataset('LST/LST_image_peak_times_interp', data=np.array(lst_image_peak_times_interp))
+            data_file.create_dataset('LST/delta_alt', data=np.array(delta_alt))
+            data_file.create_dataset('LST/delta_az', data=np.array(delta_az))
 
-                data_file.create_dataset('LST/intensities', data=np.array(intensities))
-                data_file.create_dataset('LST/intensities_width_2', data=np.array(intensities_width_2))
+            data_file.create_dataset('LST/intensities', data=np.array(intensities))
+            data_file.create_dataset('LST/intensities_width_2', data=np.array(intensities_width_2))
 
-                data_file.close()
+            data_file.close()
 
-                # in the interpolated files there will be all the original events
-                # but for the LST only the ones actually see at least from one LST (as in the original files)
-                # and that are above thresholds cuts
+            # in the interpolated files there will be all the original events
+            # but for the LST only the ones actually see at least from one LST (as in the original files)
+            # and that are above thresholds cuts
 
             if ro == '1':
                 remove(f)
@@ -209,12 +207,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '--rem_nsnerr', type=str, default='0', help='Select 1 to remove files that raise NoSuchNodeError exception.',
         required=False)
+    parser.add_argument(
+        '--parallel', type=bool, default=False,
+        help='Select 0 to process files using single CPU computation (useful when files are too big).',
+        required=False)
 
     FLAGS, unparsed = parser.parse_known_args()
 
     print(FLAGS.dirs)
-
-    format = FLAGS.format
 
     ncpus = mp.cpu_count()
     print("\nNumber of CPUs: " + str(ncpus))
@@ -236,21 +236,29 @@ if __name__ == '__main__':
 
     num_files = len(all_files)
 
-    processes = []
+    print('num_files: ', num_files)
 
-    if ncpus >= num_files:
-        print('ncpus >= num_files')
-        for f in all_files:
-            p = Process(target=func, args=([f], format, FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
-            p.start()
-            processes.append(p)
+    if FLAGS.parallel:
+
+        processes = []
+
+        if ncpus >= num_files:
+            print('ncpus >= num_files')
+            for f in all_files:
+                p = Process(target=func, args=([f], FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
+                p.start()
+                processes.append(p)
+        else:
+            print('ncpus < num_files')
+            c = chunkit(all_files, ncpus)
+            for f in c:
+                p = Process(target=func, args=(f, FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
+                p.start()
+                processes.append(p)
+
+        for p in processes:
+            p.join()
+
     else:
-        print('ncpus < num_files')
-        c = chunkit(all_files, ncpus)
-        for f in c:
-            p = Process(target=func, args=(f, format, FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr))
-            p.start()
-            processes.append(p)
 
-    for p in processes:
-        p.join()
+        func(all_files, FLAGS.rem_org, FLAGS.rem_corr, FLAGS.rem_nsnerr)

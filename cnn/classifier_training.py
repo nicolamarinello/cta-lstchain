@@ -9,6 +9,8 @@ from os.path import isfile, join
 
 import keras
 import keras.backend as K
+import tensorflow as tf
+
 import numpy as np
 from adabound import AdaBound
 from classifier_selector import select_classifier
@@ -24,7 +26,7 @@ from losseshistory import LossHistoryC
 from utils import get_all_files
 
 
-def classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
+def classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, lropf, sd, es,
                              workers, test_dirs):
     # remove semaphore warnings
     os.environ["PYTHONWARNINGS"] = "ignore:semaphore_tracker:UserWarning"
@@ -88,7 +90,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     train_gammas = np.unique(train_idxs[:, 2], return_counts=True)[1][1]
     train_protons = np.unique(train_idxs[:, 2], return_counts=True)[1][0]
 
-    if val:
+    if len(val_folders) > 0:
         print('Building validation generator...')
         validation_generator = DataGeneratorC(validation_files, batch_size=batch_size, arrival_time=time, shuffle=False,
                                               intensity=intensity_cut, leakage2_intensity=leakage2_intensity_cut)
@@ -109,7 +111,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     hype_print += '\n' + 'Epochs:' + str(epochs)
     hype_print += '\n' + 'Batch size: ' + str(batch_size)
     hype_print += '\n' + 'Optimizer: ' + str(opt)
-    hype_print += '\n' + 'Validation: ' + str(val)
+    hype_print += '\n' + 'Validation: ' + str(val_folders)
     hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
 
     hype_print += '\n' + 'intensity_cut: ' + str(intensity_cut)
@@ -136,14 +138,6 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
         hype_print += '\n' + 'decay: ' + str(a_decay)
         hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
         hype_print += '\n' + '------------'
-    elif opt == 'adabound':
-        hype_print += '\n' + '--- ADABOUND ---'
-        hype_print += '\n' + 'lr: ' + str(ab_lr)
-        hype_print += '\n' + 'final_lr: ' + str(ab_final_lr)
-        hype_print += '\n' + 'gamma: ' + str(ab_gamma)
-        hype_print += '\n' + 'weight_decay: ' + str(ab_weight_decay)
-        hype_print += '\n' + 'amsbound: ' + str(amsbound)
-        hype_print += '\n' + '------------'
     if lropf:
         hype_print += '\n' + '--- Reduce lr on plateau ---'
         hype_print += '\n' + 'lr decrease factor: ' + str(f_lrop)
@@ -162,7 +156,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
     hype_print += '\n' + 'Number of training gammas: ' + str(train_gammas)
     hype_print += '\n' + 'Number of training protons: ' + str(train_protons)
 
-    if val:
+    if len(val_folders) > 0:
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
         hype_print += '\n' + 'Number of validation gammas: ' + str(valid_gammas)
         hype_print += '\n' + 'Number of validation protons: ' + str(valid_protons)
@@ -190,7 +184,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
 
     callbacks = []
 
-    if val:
+    if len(val_folders) > 0:
         checkpoint = ModelCheckpoint(
             filepath=root_dir + '/' + model_name + '_{epoch:02d}_{acc:.5f}_{val_acc:.5f}.h5', monitor='val_acc',
             save_best_only=True)
@@ -258,7 +252,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
 
     model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
 
-    if val:
+    if len(val_folders) > 0:
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
                             steps_per_epoch=len(training_generator),
@@ -293,7 +287,7 @@ def classifier_training_main(folders, val_folders, model_name, time, epochs, bat
 
     if len(test_dirs) > 0:
 
-        if val:
+        if len(val_folders) > 0:
             # get the best model on validation
             val_acc = history.dic['val_accuracy']
             m = val_acc.index(max(val_acc))  # get the index with the highest accuracy
@@ -331,19 +325,17 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files train data.', required=True)
     parser.add_argument(
-        '--val_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files valid data.', required=True)
+        '--val_dirs', type=str, default='', nargs='+', help='Folder that contain .h5 files valid data.', required=False)
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
-        '--time', type=bool, default=True, help='Specify if feed the network with arrival time.', required=False)
+        '--time', type=bool, default=True, help='Specify whether feeding the network with arrival time.', required=False)
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
         '--batch_size', type=int, default=64, help='Batch size.', required=True)
     parser.add_argument(
         '--opt', type=str, default='adam', help='Specify the optimizer.', required=False)
-    parser.add_argument(
-        '--val', type=bool, default=False, help='Specify whether compute validation.', required=False)
     parser.add_argument(
         '--lrop', type=bool, default=False, help='Specify whether use reduce lr on plateau.', required=False)
     parser.add_argument(
@@ -365,7 +357,6 @@ if __name__ == "__main__":
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
     opt = FLAGS.opt
-    val = FLAGS.val
     lropf = FLAGS.lrop
     sd = FLAGS.sd
     es = FLAGS.es
@@ -373,5 +364,19 @@ if __name__ == "__main__":
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
-    classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
-                             workers, test_dirs)
+    # ################################## LIMIT MEMORY CONSUMPTION
+    # TensorFlow wizardry
+    config = tf.ConfigProto()
+
+    # Don't pre-allocate memory; allocate as-needed
+    config.gpu_options.allow_growth = True
+
+    # Only allow a total of half the GPU memory to be allocated
+    config.gpu_options.per_process_gpu_memory_fraction = 0.5
+
+    # Create a session with the above options specified.
+    K.tensorflow_backend.set_session(tf.Session(config=config))
+    # ##################################
+
+    classifier_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, lropf, sd, es, workers,
+                             test_dirs)

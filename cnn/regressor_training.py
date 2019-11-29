@@ -23,7 +23,7 @@ from regressor_training_plots import train_plots
 from utils import get_all_files
 
 
-def regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
+def regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, lropf, sd, es,
                             feature, workers, test_dirs):
 
     # remove semaphore warnings
@@ -91,7 +91,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
                                         shuffle=shuffle, intensity=intensity_cut,
                                         leakage2_intensity=leakage2_intensity_cut)
 
-    if val:
+    if len(val_folders) > 0:
         print('Building validation generator...')
         validation_generator = DataGeneratorR(validation_files, batch_size=batch_size, arrival_time=time,
                                               feature=feature, shuffle=False, intensity=intensity_cut,
@@ -110,7 +110,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
     hype_print += '\n' + 'Batch size: ' + str(batch_size)
     hype_print += '\n' + 'Optimizer: ' + str(opt)
     hype_print += '\n' + 'Feature: ' + str(feature)
-    hype_print += '\n' + 'Validation: ' + str(val)
+    hype_print += '\n' + 'Validation: ' + str(val_folders)
     hype_print += '\n' + 'Test dirs: ' + str(test_dirs)
 
     hype_print += '\n' + 'intensity_cut: ' + str(intensity_cut)
@@ -137,14 +137,6 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
         hype_print += '\n' + 'decay: ' + str(a_decay)
         hype_print += '\n' + 'Amsgrad: ' + str(amsgrad)
         hype_print += '\n' + '------------'
-    elif opt == 'adabound':
-        hype_print += '\n' + '--- ADABOUND ---'
-        hype_print += '\n' + 'lr: ' + str(ab_lr)
-        hype_print += '\n' + 'final_lr: ' + str(ab_final_lr)
-        hype_print += '\n' + 'gamma: ' + str(ab_gamma)
-        hype_print += '\n' + 'weight_decay: ' + str(ab_weight_decay)
-        hype_print += '\n' + 'amsbound: ' + str(amsbound)
-        hype_print += '\n' + '------------'
     elif opt == 'rmsprop':
         hype_print += '\n' + '--- RMSprop ---'
         hype_print += '\n' + 'lr: ' + str(r_lr)
@@ -168,7 +160,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
 
     hype_print += '\n' + 'Number of training batches: ' + str(len(training_generator))
 
-    if val:
+    if len(val_folders) > 0:
         hype_print += '\n' + 'Number of validation batches: ' + str(len(validation_generator))
 
     outcomes = 1
@@ -203,7 +195,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
 
     callbacks = []
 
-    if val:
+    if len(val_folders) > 0:
         checkpoint = ModelCheckpoint(
             filepath=root_dir + '/' + model_name + '_{epoch:02d}_{loss:.5f}_{val_loss:.5f}.h5', monitor='val_loss',
             save_best_only=True)
@@ -274,7 +266,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
 
     model.compile(optimizer=optimizer, loss=loss)
 
-    if val:
+    if len(val_folders) > 0:
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
                             steps_per_epoch=len(training_generator),
@@ -311,7 +303,7 @@ def regressor_training_main(folders, val_folders, model_name, time, epochs, batc
 
     if len(test_dirs) > 0:
 
-        if val:
+        if len(val_folders) > 0:
             # get the best model on validation
             val_loss = history.dic['val_losses']
             m = val_loss.index(min(val_loss))  # get the index with the highest accuracy
@@ -353,15 +345,13 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model', type=str, default='', help='Model type.', required=True)
     parser.add_argument(
-        '--time', type=bool, default=True, help='Specify if feed the network with arrival time.', required=False)
+        '--time', type=bool, default=True, help='Specify whether feeding the network with arrival time.', required=False)
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs.', required=True)
     parser.add_argument(
         '--batch_size', type=int, default=64, help='Batch size.', required=True)
     parser.add_argument(
         '--opt', type=str, default='adam', help='Specify the optimizer.', required=False)
-    parser.add_argument(
-        '--val', type=bool, default=False, help='Specify whether compute validation.', required=False)
     parser.add_argument(
         '--lrop', type=bool, default=False, help='Specify whether use reduce lr on plateau.', required=False)
     parser.add_argument(
@@ -385,7 +375,6 @@ if __name__ == "__main__":
     epochs = FLAGS.epochs
     batch_size = FLAGS.batch_size
     opt = FLAGS.opt
-    val = FLAGS.val
     lropf = FLAGS.lrop
     sd = FLAGS.sd
     es = FLAGS.es
@@ -393,5 +382,5 @@ if __name__ == "__main__":
     workers = FLAGS.workers
     test_dirs = FLAGS.test_dirs
 
-    regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, val, lropf, sd, es,
+    regressor_training_main(folders, val_folders, model_name, time, epochs, batch_size, opt, lropf, sd, es,
                             feature, workers, test_dirs)

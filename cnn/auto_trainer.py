@@ -4,7 +4,7 @@ from regressor_training import regressor_training_main
 
 if __name__ == "__main__":
 
-    which = 'energy_mape'
+    which = 'BaseLineNew'
 
     if which == 'resnets':
 
@@ -519,4 +519,104 @@ if __name__ == "__main__":
 
             K.clear_session()
 
+    elif which == 'ResNetFSE':
 
+        traind_class = ['/home/nmarinel/simulations/gamma/train/', '/home/nmarinel/simulations/proton/train/']
+        validd_class = ['/home/nmarinel/simulations/gamma/val/', '/home/nmarinel/simulations/proton/val/']
+
+        traind_regr = ['/home/nmarinel/simulations/gamma/train/']
+        validd_regr = ['/home/nmarinel/simulations/gamma/val/']
+
+        model = 'ResNetFSE'
+
+        classifier_training_main(folders=traind_class,
+                                 val_folders=validd_class,
+                                 model_name=model,
+                                 time=True,
+                                 epochs=50,
+                                 batch_size=128,
+                                 opt='adam',
+                                 lropf=True,
+                                 workers=4,
+                                 sd=False,
+                                 es=False,
+                                 test_dirs=[])
+
+        regressor_training_main(folders=traind_regr,
+                                val_folders=validd_regr,
+                                model_name=model,
+                                time=True,
+                                epochs=50,
+                                batch_size=128,
+                                opt='adam',
+                                lropf=True,
+                                feature='energy',
+                                workers=4,
+                                sd = False,
+                                es = False,
+                                test_dirs = [])
+
+        regressor_training_main(folders=traind_regr,
+                                val_folders=validd_regr,
+                                model_name=model,
+                                time=True,
+                                epochs=50,
+                                batch_size=128,
+                                opt='adam',
+                                lropf=True,
+                                feature='xy',
+                                workers=4,
+                                sd = False,
+                                es = False,
+                                test_dirs = [])
+
+    elif which == 'BaseLineNew':
+
+        traind_class = ['/home/nmarinel/simulations/gamma/train/', '/home/nmarinel/simulations/proton/train/']
+        validd_class = ['/home/nmarinel/simulations/gamma/val/', '/home/nmarinel/simulations/proton/val/']
+
+        traind_regr = ['/home/nmarinel/simulations/gamma/train/']
+        validd_regr = ['/home/nmarinel/simulations/gamma/val/']
+
+        model = 'BaseLine'
+
+        classifier_training_main(folders=traind_class,
+                                 val_folders=validd_class,
+                                 model_name=model,
+                                 time=True,
+                                 epochs=50,
+                                 batch_size=128,
+                                 opt='adam',
+                                 lropf=True,
+                                 workers=4,
+                                 sd=False,
+                                 es=False,
+                                 test_dirs=[])
+
+        regressor_training_main(folders=traind_regr,
+                                val_folders=validd_regr,
+                                model_name=model,
+                                time=True,
+                                epochs=50,
+                                batch_size=128,
+                                opt='adam',
+                                lropf=True,
+                                feature='energy',
+                                workers=4,
+                                sd = False,
+                                es = False,
+                                test_dirs = [])
+
+        regressor_training_main(folders=traind_regr,
+                                val_folders=validd_regr,
+                                model_name=model,
+                                time=True,
+                                epochs=50,
+                                batch_size=128,
+                                opt='adam',
+                                lropf=True,
+                                feature='xy',
+                                workers=4,
+                                sd=False,
+                                es=False,
+                                test_dirs=[])

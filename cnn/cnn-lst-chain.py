@@ -3,12 +3,71 @@ import argparse
 import numpy as np
 import pandas as pd
 from keras.models import load_model
+import matplotlib.pyplot as plt
+import matplotlib
+from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 from keras.utils.data_utils import OrderedEnqueuer
 from keras.utils.generic_utils import Progbar
 from tabulate import tabulate
+from scipy.stats import norm
 
 from generators import DataGeneratorChain
 from utils import get_all_files
+
+
+def get_mus_sigmas(df, npoints):
+
+    edges = np.linspace(-2, 2, npoints + 1)
+    mus = np.array([])
+    sigmas = np.array([])
+
+    for i in range(npoints):
+        edge1 = edges[i]
+        edge2 = edges[i + 1]
+        dfbe = df[(df['mc_energy_reco'] >= edge1) & (df['mc_energy_reco'] < edge2)]
+        # histogram
+        difE = ((dfbe['mc_energy'] - dfbe['mc_energy_reco']) * np.log(10))
+        # difE = difE[abs(difE) < 1.5]
+        mu, sigma = norm.fit(difE)
+        # mu, sigma = norm.fit(difE[abs(difE) < 1.5])
+        mus = np.append(mus, mu)
+        sigmas = np.append(sigmas, sigma)
+
+    edges = np.power(10, edges)
+    bin_centers = np.sqrt((edges[:-1] * edges[1:]))
+
+    return bin_centers, mus, sigmas
+
+
+def get_theta2_68(df, npoints):
+
+    edges = np.linspace(-2, 2, npoints + 1)
+    theta2_68 = np.array([])
+
+    for i in range(npoints):
+        edge1 = edges[i]
+        edge2 = edges[i + 1]
+        dfbe = df[(df['mc_energy_reco'] >= edge1) & (df['mc_energy_reco'] < edge2)]
+        theta2 = (dfbe['d_alt'] - dfbe['d_alt_reco']) ** 2 + (dfbe['d_az'] - dfbe['d_az_reco']) ** 2
+        # 68% containement computation
+        total = len(theta2)
+        hist = np.histogram(theta2, bins=1000)
+        for k in range(0, len(hist[0]) + 1):
+            fraction = np.sum(hist[0][:k]) / total
+            if fraction > 0.68:
+                # if rf:
+                #    print('\nTotal: ', total)
+                #    print('0.68 of total:', np.sum(hist[0][:k]))
+                #    print('Fraction:', fraction)
+                theta2_68 = np.append(theta2_68, hist[1][k])
+                break
+
+    # back to linear
+    edges = np.power(10, edges)
+    bin_centers = np.sqrt((edges[:-1] * edges[1:]))
+
+    return bin_centers, theta2_68
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -63,17 +122,6 @@ if __name__ == "__main__":
         e_reco = reg_energy.predict_on_batch(x)
         altaz_reco = reg_direction.predict_on_batch(x)
 
-        # y_prd = y_prd.reshape(y_prd.shape[0])
-        # e_reco = e_reco.reshape(e_reco.shape[0])
-
-        # print('y: ', y.shape)
-        # print('y_prd: ', y_prd.shape)
-        # print('intensity: ', intensity.shape)
-        # print('energy: ', energy.shape)
-        # print('e_reco: ', e_reco.shape)
-        # print('altaz: ', altaz.shape)
-        # print('altaz_reco: ', altaz_reco.shape)
-
         alt = altaz[:, 0].reshape(altaz.shape[0], 1)
         az = altaz[:, 1].reshape(altaz.shape[0], 1)
 
@@ -100,4 +148,124 @@ if __name__ == "__main__":
 
     df.to_pickle('lstch_analysis.pkl')
 
-    print(df)
+    # print(df)
+
+    # ------------------------- plots --------------------------
+
+    # ROCs
+    # fig = plt.figure(figsize=(7, 6))
+    #
+    # matplotlib.rcParams.update({'font.size': 13})
+    # cmap = plt.get_cmap("tab10")
+    #
+    fpr, tpr, _ = roc_curve(df['Label'], df['gammanes'])
+    #
+    # plt.plot(fpr, tpr, label='Classifier', color=cmap(0))
+    # plt.xlabel('False Positive Rate (1-specitivity)')
+    # plt.ylabel('True Positive Rate (sensitivity)')
+    # plt.legend(loc='lower right', fancybox=True, framealpha=0.)
+    # plt.grid(b=True, which='major', linestyle='--')
+    # plt.grid(b=True, which='minor', linestyle='--')
+    #
+    # plt.tight_layout()
+    # plt.show()
+    # fig.savefig('class_res.eps', format='eps', bbox_inches='tight', transparent=True)
+
+    ##########
+
+    n_curves = 12
+
+    energy = 'mc_energy_reco'
+    edges = np.linspace(-2, 2, n_curves + 1)
+
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
+
+    ax = axs[0]
+
+    cmap = plt.get_cmap("tab10")
+    ax.plot(fpr, tpr, label='Classifier', color=cmap(0))
+    ax.set_xlabel('False Positive Rate (1-specitivity)')
+    ax.set_ylabel('True Positive Rate (sensitivity)')
+    ax.legend(loc='lower right', fancybox=True, framealpha=0., prop={'size': 18})
+    ax.grid(b=True, which='major', linestyle='--')
+    ax.grid(b=True, which='minor', linestyle='--')
+
+    ax = axs[1]
+    ax.set_prop_cycle('color', plt.cm.Spectral(np.linspace(0, 1, n_curves)))
+
+    for i in range(n_curves):
+        edge1 = edges[i]
+        edge2 = edges[i + 1]
+        dfbe = df[(df[energy] >= edge1) & (df[energy] < edge2)]
+        try:
+            # print(i)
+            fpr, tpr, _ = roc_curve(dfbe['Label'], dfbe['gammanes'])
+            roc_auc = roc_auc_score(dfbe['Label'], dfbe['gammanes'])
+            ax.plot(fpr, tpr, label='AUC={:.3f}, [{:.2f}, {:.2f}] TeV'.format(roc_auc, 10 ** edge1, 10 ** edge2))
+        except:
+            pass
+
+    ax.plot([0, 1], [0, 1], 'k--', label='Random')
+    ax.legend(loc='lower right', fancybox=True, framealpha=0., prop={'size': 18})
+    ax.set_xlabel('False Positive Rate (1-specitivity)')
+    ax.set_ylabel('True Positive Rate (sensitivity)')
+    ax.grid(b=True, which='major', linestyle='--')
+    ax.grid(b=True, which='minor', linestyle='--')
+
+    fig.tight_layout()
+    plt.show()
+    fig.savefig('roc_rocs.eps', format='eps', bbox_inches='tight', transparent=True)
+
+    # ################### ENERGY BIAS AND RESOLUTION ####################################
+
+    npoints = 12
+    bin_centers, mus, sigmas = get_mus_sigmas(df, npoints)
+
+    fig = plt.figure(figsize=(7, 6))
+
+    matplotlib.rcParams.update({'font.size': 13})
+    cmap = plt.get_cmap("tab10")
+
+    plt.semilogx(bin_centers, mus, label='Energy regressor', color=cmap(0), marker='o')
+    plt.xlabel('$E_{\mathrm{reco}}$[TeV]')
+    plt.ylabel(r'$\Delta E$')
+
+    plt.legend(loc='upper left', fancybox=True, framealpha=0.)
+    plt.grid(b=True, which='major', linestyle='--')
+    plt.grid(b=True, which='minor', linestyle='--')
+
+    plt.tight_layout()
+    fig.savefig('energy_bias.eps', format='eps', bbox_inches='tight', transparent=True)
+
+    # reso
+
+    fig = plt.figure(figsize=(7, 6))
+
+    matplotlib.rcParams.update({'font.size': 13})
+    cmap = plt.get_cmap("tab10")
+
+    plt.semilogx(bin_centers, sigmas, label='Energy regressor', color=cmap(0), marker='o')
+    plt.ylabel(r'$(\Delta E/E)_{68}$')
+    plt.xlabel('$E_{\mathrm{reco}}$[TeV]')
+    plt.legend(loc='upper left', fancybox=True, framealpha=0.)
+    plt.grid(b=True, which='major', linestyle='--')
+    plt.grid(b=True, which='minor', linestyle='--')
+
+    plt.tight_layout()
+    fig.savefig('energy_reso.eps', format='eps', bbox_inches='tight', transparent=True)
+
+    # angular resolution
+    bin_centers, theta2_68 = get_theta2_68(df, n_curves)
+
+    fig = plt.figure(figsize=(7, 6))
+
+    plt.semilogx(bin_centers, np.sqrt(theta2_68), label='Direction regressor', color=cmap(0), marker='o')
+    plt.ylabel(r'$\theta_{68}$ [deg]')
+    plt.xlabel('$E_{\mathrm{reco}}$[TeV]')
+    plt.legend(loc='upper right', fancybox=True, framealpha=0.)
+    plt.grid(b=True, which='major', linestyle='--')
+    plt.grid(b=True, which='minor', linestyle='--')
+
+    plt.tight_layout()
+    fig.savefig('dirreco_results.eps', format='eps', bbox_inches='tight', transparent=True)
+
